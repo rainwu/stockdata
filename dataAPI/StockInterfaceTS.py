@@ -17,7 +17,10 @@ import tushare as ts
 import time
 import datetime
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 import settings
 from Base import Base
 

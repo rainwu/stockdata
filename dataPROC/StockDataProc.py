@@ -8,7 +8,10 @@ Created on Tue Feb 02 16:15:35 2016
 #常用股票数据，获取函数
 
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 import settings
 import pandas as pd
 from Base import Base 

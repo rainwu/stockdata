@@ -6,7 +6,10 @@ Created on Wed Apr 20 11:01:14 2016
 """
 
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 import settings
 import pandas as pd
 import pymongo

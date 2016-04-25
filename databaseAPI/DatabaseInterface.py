@@ -5,7 +5,10 @@ Created on Mon Apr 18 18:47:37 2016
 @author: warriorzhai
 """
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 import sys
 import pymongo
 import time

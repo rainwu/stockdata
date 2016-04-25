@@ -5,7 +5,10 @@ Created on Wed Feb 03 11:47:49 2016
 @author: warriorzhai
 """
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 import settings
 from Base import Base 
 #from dataPROC.StockDataProc import StockDataProc
