@@ -94,12 +94,16 @@ class DatabaseInterface(object):
         step=self.db_findone(ctrl_filter_dic,ctrl_table_struct['collnam'],ctrl_findsel)
         print '断点开始于'+str(step)
         
+        total_len=len(filter_dicl)-step
+        process=0.0
         #批量更新
         for f,u in zip(filter_dicl[step:],update_dicl[step:]):
             print '更新数据.....'
             self.db_updateone(f,u,collnam)
             print '更新计数.....'
             self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'])
+            process=process+1
+            print '已完成'+str(round(process*100/total_len,2))+'%.....'
         print '数据更新完毕，重置计数器.....'
         self.db_updateone(ctrl_filter_dic,ctrl_updateover_dic,ctrl_table_struct['collnam'])
             

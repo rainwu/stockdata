@@ -87,6 +87,7 @@ class Base(object):
 
                 return res
         
+        
         def listpair_2dict(self,key_list,val_list):
             return [{x[0]:x[1]} for x in zip(key_list,val_list)]
         
@@ -188,6 +189,9 @@ class Base(object):
         #将pandas的df的每行转为字典列表返回
         def pd_df2diclist(self,df):
             return df.T.to_dict().values()
+        
+        def sort_diclist_byval(self,diclist,sort_key):
+            return sorted(diclist, key=lambda k: k[sort_key]) 
         
         #一个df列表，以列df_init为标准，merge列表中所有df，返回merge结果
         #df_list---iter of df,待合并的df列表

@@ -10,6 +10,7 @@ try:
 except KeyError:
     pass
 import sys
+import collections
 import pymongo
 from databaseAPI.DatabaseInterface import DatabaseInterface
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
@@ -30,6 +31,7 @@ class DatabaseInit(object):
     def hd_df2dictlist(self,df,drop_duplicate=True):
         if drop_duplicate:
             df=df.drop_duplicates()
+        
         return self.base.pd_df2diclist(df)
     
     #如果每组是一列的df，则转为列表
@@ -45,8 +47,12 @@ class DatabaseInit(object):
         leftkey=1-grpkey
         grp=df.groupby(df.columns[grpkey])
         
-        keys=grp.groups.keys()
-        vals_ori=[df[[leftkey]].ix[i].squeeze() for i in grp.groups.values()]
+        #为了断点续传不会乱序，使用排序字典
+        grpdict=collections.OrderedDict(sorted(grp.groups.items()))
+        
+        
+        keys=grpdict.keys()
+        vals_ori=[df[[leftkey]].ix[i].squeeze() for i in grpdict.values()]
         vals=[v.tolist() if self.base.is_iter(v) else [v] for v in vals_ori]
         return (keys,vals)
 
@@ -60,8 +66,8 @@ class DatabaseInit(object):
         #建立数据库查询字典列表
         filt=hd_method(df[keyindex])
         #建立数据库更新字典表
-        
         update_ori=hd_method(df[leftindex])
+        
         key_list=['$set']*len(update_ori)
         update=self.base.listpair_2dict(key_list,update_ori)
         return (filt,update)
@@ -81,7 +87,7 @@ class DatabaseInit(object):
         #构建更新语句
         
         filt_key_list=[filt_field]*len(filt_val_list)
-        filt=update=self.base.listpair_2dict(filt_key_list,filt_val_list)
+        filt=self.base.listpair_2dict(filt_key_list,filt_val_list)
 
         update_key_list=[update_field]*len(update_val_list)
         update_ori=self.base.listpair_2dict(update_key_list,update_val_list)
