@@ -95,6 +95,7 @@ class DatabaseInit(object):
         update=self.base.listpair_2dict(key_list,update_ori)
 
         return (filt,update)
+    
         
     def init_table(self,collnam,itemnams,keyvals,key_index=0):
         coll=self.dbobj.db_connect()[collnam]
@@ -114,7 +115,7 @@ class DatabaseInit(object):
         coll.ensure_index(itemnams[key_index], unique=True)
         
             
-    def insert_ctrl(self,tarcollnam):
+    def init_ctrl(self,tarcollnam):
         table_struct=tables.control_table_struct
         
         ctrlcollnam=table_struct['collnam']
@@ -140,6 +141,12 @@ class DatabaseInit(object):
         self.init_table(collnam,itemnams,keyvals,keyindex)
         print '创建控制表....' 
         self.insert_ctrl(collnam)
+            
+        
+    def init_grps(self,tarcollnam):
+
+    
+
     
     def init_stockinfo(self):
         keyvals=self.dtproc.get_tickerall()
@@ -213,7 +220,9 @@ class DatabaseInit(object):
         #获取需要更新的数据库的表名
         updatecollnam=db_table['collnam']
         
+        print updatecollnam+':EquInd part 开始初次插入数据.....'
         
+        print '原始数据抓取....'
         #------数据抓取------
         crawl_data=self.wp.itfEquInd_proc(field=crawl_field)
         #-------------------
@@ -256,7 +265,9 @@ class DatabaseInit(object):
         updatecollnam=db_table['collnam']
         
         
+        print updatecollnam+':EquInd part 开始初次插入数据.....'
         #------数据抓取------
+        print '原始数据抓取....'
         crawl_data=self.wp.itfConCla_proc(field=crawl_field)
         #-------------------
         

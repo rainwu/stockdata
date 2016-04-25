@@ -13,5 +13,5 @@ from databaseAPI.DatabaseInit import DatabaseInit
 
 instance=DatabaseInit()
 #instance.insert_stockinfo_StoBas()
-instance.update_stockinfo_EquInd()
+instance.insert_stockinfo_EquInd()
 #instance.insert_stockinfo_ConCla()

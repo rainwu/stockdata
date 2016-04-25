@@ -25,6 +25,8 @@ class DatabaseUpdate(object):
         self.dbobj=DatabaseInterface()
         self.wp=StockInterfaceWrap()
     
+    def update_array(self)
+    
     
 
         
