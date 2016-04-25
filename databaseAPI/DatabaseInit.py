@@ -147,7 +147,7 @@ class DatabaseInit(object):
         table_struct['keyvals']=keyvals
         return self.init_tableandcrtl(**table_struct)
 
-    def update_stockinfo_StoBas(self):
+    def insert_stockinfo_StoBas(self):
         
         #配置基本参数
         #------抓取参数表-----
@@ -197,7 +197,7 @@ class DatabaseInit(object):
 
     
         
-    def update_stockinfo_EquInd(self):
+    def insert_stockinfo_EquInd(self):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
@@ -239,7 +239,7 @@ class DatabaseInit(object):
         print '更新行业二'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
         
-    def update_stockinfo_ConCla(self):
+    def insert_stockinfo_ConCla(self):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
