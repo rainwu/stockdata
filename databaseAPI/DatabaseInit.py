@@ -139,6 +139,7 @@ class DatabaseInit(object):
         return self.init_tableandcrtl(**table_struct)
 
     def update_stockinfo_StoBas(self):
+        
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
@@ -154,9 +155,12 @@ class DatabaseInit(object):
         #获取需要更新的数据库的表名
         updatecollnam=db_table['collnam']
         
-        
+        print updatecollnam+':StoBas part 开始初次插入数据.....'
         #------数据抓取------
+        
+        print '原始数据抓取....'
         crawl_data=self.wp.itfStoBas_proc(field=crawl_field)
+
         #-------------------
         
         #------抓取数据处理------
@@ -170,6 +174,7 @@ class DatabaseInit(object):
         df_proc=crawl_data
         db_filt_list,db_update_list=self.hd_build_upparas(df_proc,keyindex)
          #批量更新
+        print '批量更新数据....'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
         
         

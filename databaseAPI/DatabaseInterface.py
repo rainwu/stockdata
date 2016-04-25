@@ -33,10 +33,6 @@ class DatabaseInterface(object):
             break
         return res
     
-    #可用的op必须有data参数
-    def _db_iter_withrecord(self,coll,data_iter,op,op_paras):
-        for data in data_iter:
-            op(data,**op_paras)
 
 
     def db_connect(self):
@@ -100,9 +96,8 @@ class DatabaseInterface(object):
             print '更新数据.....'
             self.db_updateone(f,u,collnam)
             print '更新计数.....'
-            print f
             self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'])
-        
+        print '数据更新完毕，重置计数器.....'
         self.db_updateone(ctrl_filter_dic,ctrl_updateover_dic,ctrl_table_struct['collnam'])
             
         return 0
