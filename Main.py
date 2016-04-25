@@ -9,7 +9,7 @@ try:
     os.chdir(os.environ["WORK_PATH"])
 except KeyError:
     pass
-from DatabaseInit import DatabaseInit
+from databaseAPI.DatabaseInit import DatabaseInit
 
 instance=DatabaseInit()
 instance.update_stockinfo_StoBas()

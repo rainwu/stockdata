@@ -7,7 +7,10 @@ Created on Fri Nov 13 14:17:13 2015
 import pandas as pd
 import sys
 import os
-os.chdir(os.environ["WORK_PATH"])
+try:
+    os.chdir(os.environ["WORK_PATH"])
+except KeyError:
+    pass
 from Base import Base
 from dataAPI.StockInterfaceTS import StockInterfaceTS
 from dataAPI.StockInterfaceYH import StockInterfaceYH
