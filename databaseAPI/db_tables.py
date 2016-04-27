@@ -4,9 +4,7 @@ Created on Tue Apr 19 15:37:57 2016
 
 @author: warriorzhai
 """
-tables_all=[control_table_struct['collnam'],
-            stockinfo_table_struct['collnam'],
-            stockgrps_table_struct['collnam']]
+
 
 #control
 control_table_struct={
@@ -42,12 +40,16 @@ stockgrps_table_struct={
     'itemnams':['grpnam','ticker'],
     'keyindex':0
     }
+    
 stockgrps_crawlnew_struct={
-    'ts_StoBas':['code'],
-    'db_StoBas':['ticker'],
     'ts_ConCla':['code','c_name'],
-    'db_ConCla':['ticker','concepts']
+    'db_ConCla':['ticker','grpnam']
 }
 stockgrps_crawldaily_struct={
    
 }
+
+
+tables_all=[control_table_struct['collnam'],
+            stockinfo_table_struct['collnam'],
+            stockgrps_table_struct['collnam']]

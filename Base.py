@@ -63,6 +63,9 @@ class Base(object):
         
         def lists_minus(self,lleft,lright):
             return [l for l in lleft if l not in lright]
+            
+        def any_2list(self,obj):
+            return obj.tolist() if self.is_iter(obj) else [obj] 
         
         def is_iter(self,x):
             if hasattr(x, '__iter__'):
@@ -189,6 +192,12 @@ class Base(object):
         #将pandas的df的每行转为字典列表返回
         def pd_df2diclist(self,df):
             return df.T.to_dict().values()
+        
+        #keys=[key1,key2]
+        #val_lists=[[vallist1],[vallist2]]
+        def lists_todiclist(self,keys,val_lists):
+            vals=zip(*val_lists)
+            return [dict(zip(keys,val)) for val in vals]
         
         def sort_diclist_byval(self,diclist,sort_key):
             return sorted(diclist, key=lambda k: k[sort_key]) 

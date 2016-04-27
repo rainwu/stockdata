@@ -37,24 +37,29 @@ class DatabaseInit(object):
     #如果每组是一列的df，则转为列表
     #返回查询列表和更细列表
     def hd_df2grp2lists(self,df,grpkey=0,drop_duplicate=True):
-        if df.shape[1]!=2:
-            print '列数必须为2'
-            sys.exit()
+#        if df.shape[1]!=2:
+#            print '列数必须为2'
+#            sys.exit()
         
         if drop_duplicate:
             df=df.drop_duplicates()
-            
-        leftkey=1-grpkey
+        
+        leftkeys=self.base.lists_minus(df.columns,self.base.any_2list(df.columns[grpkey]))
         grp=df.groupby(df.columns[grpkey])
         
         #为了断点续传不会乱序，使用排序字典
         grpdict=collections.OrderedDict(sorted(grp.groups.items()))
         
-        
         keys=grpdict.keys()
-        vals_ori=[df[[leftkey]].ix[i].squeeze() for i in grpdict.values()]
-        vals=[v.tolist() if self.base.is_iter(v) else [v] for v in vals_ori]
-        return (keys,vals)
+        values=[]
+        for j in leftkeys:
+            val_ori=[df[j].ix[i].squeeze() for i in grpdict.values()]
+            val=[self.base.any_2list(v) for v in val_ori]
+            values.append(val)
+        if len(values)==1:
+            return (keys,values[0])
+        else:
+            return (keys,values)
 
     #默认数据库查找索引的建立方式为hd_df2dictlist
     def hd_build_upparas(self,df,keyindex=0):
@@ -72,18 +77,18 @@ class DatabaseInit(object):
         update=self.base.listpair_2dict(key_list,update_ori)
         return (filt,update)
     
-    def hd_build_upparas_grp(self,df,keyindex=0):
+    def hd_build_upparas_grp(self,df,grpkey=0):
         if df.shape[1]!=2:
             print '列数必须为2'
             sys.exit()
         
         #数据查找和更新的字段名称
-        filt_field=df.columns[0]
-        update_field=df.columns[1]
+        filt_field=df.columns[grpkey]
+        update_field=df.columns[1-grpkey]
         
         #数据处理，一对多的更新，将更新的内容合并成列表
         hd_method=self.hd_df2grp2lists
-        filt_val_list,update_val_list=hd_method(df)
+        filt_val_list,update_val_list=hd_method(df,grpkey)
         #构建更新语句
         
         filt_key_list=[filt_field]*len(filt_val_list)
@@ -95,6 +100,9 @@ class DatabaseInit(object):
         update=self.base.listpair_2dict(key_list,update_ori)
 
         return (filt,update)
+    
+    def hd_build_inparas_grp(self,df,grpkey=0):
+        pass
     
         
     def init_table(self,collnam,itemnams,keyvals,key_index=0):
@@ -143,8 +151,36 @@ class DatabaseInit(object):
         self.insert_ctrl(collnam)
             
         
-    def init_grps(self,tarcollnam):
-
+    def init_grps(self):
+        
+        db_table=tables.stockgrps_table_struct 
+        insertcollnam=db_table['collnam']
+        itemnams=db_table['itemnams']
+        
+        grps_nam_tk=['tk_all','tk_sh','tk_sz','tk_cyb']
+        grps_val_tkall=self.proc.get_tickerall()
+        grps_val_tksh=self.proc.get_tickersh(grps_val_tkall)
+        grps_val_tksz=self.proc.get_tickersz(grps_val_tkall)
+        grps_val_tkcyb=self.proc.get_tickercyb(grps_val_tkall)
+        grps_val_tk=[grps_val_tkall,grps_val_tksh,grps_val_tksz,grps_val_tkcyb]
+        insertdata=self.base.lists_todiclist(itemnams,[grps_nam_tk,grps_val_tk])
+        self.proc.db_insertmany(insertdata,insertcollnam)
+        
+    
+    def insert_stockgrps_ConCla(self,updatecollnam):
+        crawl_table=tables.stockgrps_crawlnew_struct      
+        crawl_field=crawl_table['ts_ConCla']
+        crawl_data=self.wp.itfConCla_proc(field=crawl_field)
+        
+        crawl_field_2db=crawl_table['db_ConCla']
+        crawl_data.columns=crawl_field_2db
+        #------数据批量更新------
+        #建立批量数据更新语句
+        grpkey=1
+        df_proc=crawl_data
+        db_filt_list,db_update_list=self.hd_build_upparas_grp(df_proc,grpkey)
+        print '批量更新数据....'
+        self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
     
 
     
@@ -154,7 +190,7 @@ class DatabaseInit(object):
         table_struct['keyvals']=keyvals
         return self.init_tableandcrtl(**table_struct)
 
-    def insert_stockinfo_StoBas(self):
+    def update_stockinfo_StoBas(self):
         
         #配置基本参数
         #------抓取参数表-----
@@ -204,7 +240,7 @@ class DatabaseInit(object):
 
     
         
-    def insert_stockinfo_EquInd(self):
+    def update_stockinfo_EquInd(self):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
@@ -248,7 +284,7 @@ class DatabaseInit(object):
         print '更新行业二'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
         
-    def insert_stockinfo_ConCla(self):
+    def update_stockinfo_ConCla(self):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
