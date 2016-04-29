@@ -65,7 +65,7 @@ class Base(object):
             return [l for l in lleft if l not in lright]
             
         def any_2list(self,obj):
-            return obj.tolist() if self.is_iter(obj) else [obj] 
+            return obj if self.is_iter(obj) else [obj] 
         
         def is_iter(self,x):
             if hasattr(x, '__iter__'):
@@ -90,10 +90,18 @@ class Base(object):
 
                 return res
         
+        #input--['k1','k2'],[1,2]
+        #output--[{'k1': 1}, {'k2': 2}]
+        def lists_2dictlists(self,key_list,val_list):
+            f=lambda k,v:self.lists_2dict(k,v)
+            return map(f,key_list,val_list)
         
-        def listpair_2dict(self,key_list,val_list):
-            return [{x[0]:x[1]} for x in zip(key_list,val_list)]
-        
+        #input--['k1','k2'],[1,2]
+        #output--{'k1': 1, 'k2': 2}
+        def lists_2dict(self,key_list,val_list):
+            key_list=self.any_2list(key_list)
+            val_list=self.any_2list(val_list)
+            return dict(zip(key_list,val_list))
         
         
         #将一个字典列表中，合并相同key值的value为list

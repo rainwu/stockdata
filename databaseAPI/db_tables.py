@@ -4,13 +4,13 @@ Created on Tue Apr 19 15:37:57 2016
 
 @author: warriorzhai
 """
-
+#index默认在最前面
 
 #control
 control_table_struct={
     'collnam':'control',
     'itemnams':['collnam','step','update'],
-    'keyindex':0
+    'itemvals':[0,None]
     }
 
 
@@ -37,7 +37,9 @@ stockinfo_crawldaily_struct={
 #stockgrps
 stockgrps_table_struct={
     'collnam':'stockgrps',
-    'itemnams':['grpnam','ticker'],
+    'itemnams':['grpnam'],
+    'itemvals':[],
+    'indexvals':['tickers','concepts'],
     'keyindex':0
     }
     
