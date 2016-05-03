@@ -169,6 +169,7 @@ class DatabaseInit(object):
     def init_stockgrps(self):
         table_struct=tables.stockgrps_table_struct
         index_vals=table_struct['index_vals']
+        print '初始化grps表'
         return self.init_tableandcrtl(table_struct,index_vals)
     
     def init_stockinfo_update(self,funcs):
@@ -181,12 +182,13 @@ class DatabaseInit(object):
         
         #build insert data
         insert_keys=['tk_all','tk_sh','tk_sz','tk_cyb']
+        print '原始数据抓取....'
         grps_val_tkall=self.proc.get_tickerall()
         grps_val_tksh=self.proc.get_tickersh(grps_val_tkall)
         grps_val_tksz=self.proc.get_tickersz(grps_val_tkall)
         grps_val_tkcyb=self.proc.get_tickercyb(grps_val_tkall)
         insert_vals=[grps_val_tkall,grps_val_tksh,grps_val_tksz,grps_val_tkcyb]
-        
+        print '插入组数据'+grpnam
         #插入数组数据
         self.up.update_stockgrps(db_table,grpnam,insert_keys,insert_vals)
 
@@ -200,7 +202,12 @@ class DatabaseInit(object):
         #build 语句
         insert_keys,insert_vals=self.hd_df2grp2lists(crawl_data,grpkey=1)
         #插入数组数据
+        print '插入组数据'+grpnam
         self.up.update_stockgrps(db_table,grpnam,insert_keys,insert_vals)
+        
+    
+
+    
         
         
 
