@@ -45,7 +45,9 @@ stockgrps_table_struct={
     
 stockgrps_crawlnew_struct={
     'ts_ConCla':['code','c_name'],
-    'db_ConCla':['ticker','grpnam']
+    'db_ConCla':['ticker','grpnam'],
+    'tl_EquInd':['ticker','industryName2'],
+    'db_EquInd':['ticker','grpnam']
 }
 stockgrps_crawldaily_struct={
    

@@ -93,7 +93,7 @@ class Base(object):
         #input--['k1','k2'],[1,2]
         #output--[{'k1': 1}, {'k2': 2}]
         def lists_2dictlists(self,key_list,val_list):
-            f=lambda k,v:self.lists_2dict(k,v)
+            f=lambda k,v:{k:v}
             return map(f,key_list,val_list)
         
         #input--['k1','k2'],[1,2]

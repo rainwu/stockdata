@@ -47,7 +47,7 @@ class StockInterfaceTS(object):
         for i in range(settings.try_times):
             try:
                 res=itf(**itf_paras)
-            except:
+            except KeyboardInterrupt:
                 print '连接出错，第'+str(i)+'重试中......'
                 time.sleep(settings.sleep_time)
                 continue

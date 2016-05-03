@@ -175,7 +175,7 @@ class DatabaseInit(object):
     def init_stockinfo_update(self,funcs):
         pass
 
-    def init_stockgrps_update(self,funcs):
+    def init_stockgrps_update(self):
         pass
     
     def update_stockgrps_tickers(self,db_table,grpnam):
@@ -206,7 +206,17 @@ class DatabaseInit(object):
         self.up.update_stockgrps(db_table,grpnam,insert_keys,insert_vals)
         
     
-
+    def update_stockgrps_inds2(self,db_table,crawl_field,crawl_field_2db,grpnam):   
+        #build insert data
+        #get data
+        #------数据抓取------
+        print '原始数据抓取....'
+        crawl_data=self.wp.itfEquInd_proc(field=crawl_field)
+        #build 语句
+        insert_keys,insert_vals=self.hd_df2grp2lists(crawl_data,grpkey=1)
+        #插入数组数据
+        print '插入组数据'+grpnam
+        self.up.update_stockgrps(db_table,grpnam,insert_keys,insert_vals)
     
         
         

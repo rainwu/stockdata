@@ -25,18 +25,18 @@ class DatabaseInterface(object):
         self.base=Base()
     
     def _db_connect(self,op,op_paras={}):
-#        for i in range(settings.try_times):
-#            try:
-#                res=op(**op_paras)
-#            except:
-#                print '连接出错，第'+str(i)+'重试中......'
-#                time.sleep(settings.sleep_time)
-#                if i==(settings.try_times-1):
-#                    print '操作失败'
-#                    sys.exit()
-#                continue
-#            break
-        res=op(**op_paras)
+        for i in range(settings.try_times):
+            try:
+                res=op(**op_paras)
+            except KeyboardInterrupt:
+                print '连接出错，第'+str(i)+'重试中......'
+                time.sleep(settings.sleep_time)
+                if i==(settings.try_times-1):
+                    print '操作失败'
+                    sys.exit()
+                continue
+            break
+#        res=op(**op_paras)
         return res
     
 

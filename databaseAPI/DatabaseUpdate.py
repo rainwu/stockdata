@@ -24,6 +24,7 @@ class DatabaseUpdate(object):
     def __init__(self):
         self.dbobj=DatabaseInterface()
         self.wp=StockInterfaceWrap()
+        self.base=Base()
     
     def update_stockgrps(self,db_table,grpnam,insert_keys,insert_vals):
         insertcollnam=db_table['collnam']
@@ -34,7 +35,7 @@ class DatabaseUpdate(object):
         filter_dic={indexnam:grpnam}
         
         #build insert data      
-        update_dic=self.base.lists_todiclists(insert_keys,insert_vals)
+        update_dic=self.base.lists_2dict(insert_keys,insert_vals)
         
         #插入数组
         self.dbobj.db_insertarray_many(filter_dic,update_dic,insertcollnam)
