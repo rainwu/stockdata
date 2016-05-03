@@ -128,7 +128,7 @@ class DatabaseInit(object):
         insert_data=self.base.lists_2dictlists(insert_keys,insert_vals)
         #插入数据
         self.dbobj.db_insertmany(insert_data,insertcollnam)
-        self.dbobj.db_ensure_index(insertitemnams[index_id],unique=True)
+        self.dbobj.db_ensure_index(insertcollnam,insertitemnams[index_id],unique=True)
         
 
             
@@ -150,7 +150,7 @@ class DatabaseInit(object):
         insert_data=self.base.lists_2dict(insert_keys,insert_vals)
         #插入数据
         self.dbobj.db_insertone(insert_data,ctrlcollnam)
-        self.dbobj.db_ensure_index(itemnams[index_id],unique=True)
+        self.dbobj.db_ensure_index(ctrlcollnam,itemnams[index_id],unique=True)
         
     
     def init_tableandcrtl(self,tb,index_vals,index_id=0):
@@ -168,7 +168,7 @@ class DatabaseInit(object):
     
     def init_stockgrps(self):
         table_struct=tables.stockgrps_table_struct
-        index_vals=table_struct['index_vals']
+        index_vals=table_struct['indexvals']
         print '初始化grps表'
         return self.init_tableandcrtl(table_struct,index_vals)
     

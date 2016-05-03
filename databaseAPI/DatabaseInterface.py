@@ -150,10 +150,10 @@ class DatabaseInterface(object):
         result=self._db_connect(op)
         return result
     
-    def db_ensure_index(self,collnam,unique=True):
+    def db_ensure_index(self,collnam,indexnam,unique=True):
         coll=self.db_connect()[collnam]
         op=coll.ensure_index
-        op_para={'unique':unique}
+        op_para={'key_or_list':indexnam,'unique':unique}
         result=self._db_connect(op,op_para)
         return result
         
