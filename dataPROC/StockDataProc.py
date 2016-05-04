@@ -17,6 +17,7 @@ import pandas as pd
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
+from databaseAPI.DatabaseInterface import DatabaseInterface
 
 date_format=settings.date_format
 
@@ -24,7 +25,7 @@ class StockDataProc(object):
     
     def __init__(self,token=settings.token):
         self.token=settings.token
-        self.ba=Base()
+        self.base=Base()
         self.wp=StockInterfaceWrap()
         self.stat=StockDataStat()
     
@@ -58,13 +59,13 @@ class StockDataProc(object):
     
     #获取所有沪市融资融券股票代码
     def get_tickerrzrq_sh(self):
-        now=self.ba.today_as_str()
+        now=self.base.today_as_str()
         field=['stockCode']
         return self.wp.itfShMarDetA_proc(date=now,field=field).squeeze()
     
     #获取所有深市融资融券股票代码
     def get_tickerrzrq_sz(self):
-        now=self.ba.today_as_str()
+        now=self.base.today_as_str()
         field=['stockCode']
         return self.wp.itfSzMarDetA_proc(date=now,field=field).squeeze()
     
@@ -93,7 +94,7 @@ class StockDataProc(object):
     def get_ts_concept(self,tickers='',field=''):
         res_row_sel={'code':tickers}
         data=self.wp.itfConCla_proc(field=field,res_row_sel=res_row_sel)
-        data_dict=self.ba.pdgrp_to_dic(data['c_name'].groupby(data['code']))
+        data_dict=self.base.pdgrp_to_dic(data['c_name'].groupby(data['code']))
         data_df=pd.DataFrame({'code':data_dict.keys(),'c_name':data_dict.values()})
         return data_df
     
@@ -101,9 +102,25 @@ class StockDataProc(object):
     def get_tl_industry(self,tickers='',field=['ticker','industryName2']):
         res_row_sel={'code':tickers}
         data=self.wp.itfEquInd_proc(field=field,res_row_sel=res_row_sel)
-        data_dict=self.ba.pdgrp_to_dic(data['industryName2'].groupby(data['ticker']))
+        data_dict=self.base.pdgrp_to_dic(data['industryName2'].groupby(data['ticker']))
         data_df=pd.DataFrame({'code':data_dict.keys(),'industryName2':data_dict.values()})
         return data_df
+    
+    #所有trade类必须有date项
+    def get_index_trade_day(self,code,start,end='',field=['date','close','volume'],pct=True,
+                            pct_fields=[]):
+        field=self.base.lists_add(field,'date')
+        
+        data=self.wp.itfHDatInd_proc(code,start,end,field)
+        
+        data_rev=data.iloc[::-1]
+        data_rev.set_index('date',inplace=True)
+        if pct:
+            if not pct_fields:
+                pct_fields=data_rev.columns
+            data_rev[pct_fields]=data_rev[pct_fields].pct_change(1)*100
+        return data_rev
+
     
     
         
@@ -160,7 +177,7 @@ class StockDataProc(object):
         #
         if inds!='':
             #将inds转为utf-8编码
-            #inds=self.ba.zhs_decode(inds)
+            #inds=self.base.zhs_decode(inds)
             #设置选择的行业
             res_row_sel={industryName:inds}
         else:
@@ -169,7 +186,7 @@ class StockDataProc(object):
         #获取行业分组
         stock_grp=self._get_stockbygrp(itf,inds,field=field,res_row_sel=res_row_sel)
         #将group格式转为dic格式
-        stock_grp_dic=self.ba.pdgrp_to_dic(stock_grp)
+        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
         return stock_grp_dic
     
     #按照概念获取股票列表
@@ -182,7 +199,7 @@ class StockDataProc(object):
         #
         if cons!='':
             #将inds转为utf-8编码
-            cons=self.ba.zhs_decode(cons)
+            cons=self.base.zhs_decode(cons)
             #设置选择的行业
             res_row_sel={field[1]:cons}
         else:
@@ -191,7 +208,7 @@ class StockDataProc(object):
         #获取行业分组
         stock_grp=self._stock_bygrp(itf,cons,field=field,res_row_sel=res_row_sel)
         #将group格式转为dic格式
-        stock_grp_dic=self.ba.pdgrp_to_dic(stock_grp)
+        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
         return stock_grp_dic
         
     
@@ -205,7 +222,7 @@ class StockDataProc(object):
     def get_workdays(self,start,end=''):
         field=['date']
         if end=='':
-            end=self.ba.today_as_str()
+            end=self.base.today_as_str()
         work_dates=self.wp.itfHDatInd_proc('399106',start=start,end=end,field=field)
         if not work_dates is None:
             try:
@@ -218,9 +235,9 @@ class StockDataProc(object):
     def get_workdays_last(self,date=''):
         gap=7
         if date=='':
-            date=self.ba.today_as_str()
-        end=self.ba.today_as_str(base_date=date,gap_val=-1)
-        start=self.ba.today_as_str(base_date=date,gap_val=-gap)
+            date=self.base.today_as_str()
+        end=self.base.today_as_str(base_date=date,gap_val=-1)
+        start=self.base.today_as_str(base_date=date,gap_val=-gap)
         workdays=self.get_workdays(start,end)
         if not workdays is None:
             return workdays[-1]
@@ -234,7 +251,7 @@ class StockDataProc(object):
     def get_day_trade(self,tickers,date='',trade_field=['date','close','volume']):
         #日期默认为当天
         if not date:
-            date=self.ba.today_as_str()
+            date=self.base.today_as_str()
         #获取的交易数据必须为交易日期
         if self.get_workdays(date,date) is None:
             print '输入日期非交易日期！'
@@ -248,7 +265,7 @@ class StockDataProc(object):
     #获取某一天全部股票的交易数据
     def get_day_trade_all(self,date='',trade_field=[]):
         print '获取最近一个交易日.....'
-        last_trade_date=self.get_workdays_last(date=self.ba.today_as_str())
+        last_trade_date=self.get_workdays_last(date=self.base.today_as_str())
         
         if len(trade_field)>0:
             trade_field=list(set(['code']+trade_field))
@@ -260,7 +277,7 @@ class StockDataProc(object):
             trade_data.set_index(['code'],inplace=True)
             print '获取当前停牌列表.....'
             tp_tickers=self.get_tickerTPFP()
-            tp_tickers=[self.ba.int_to_str(t) for t in tp_tickers]
+            tp_tickers=[self.base.int_to_str(t) for t in tp_tickers]
             tp_data=pd.DataFrame([[None]*(len(trade_field)-1)]*len(tp_tickers),index=tp_tickers,columns=trade_data.columns)
             return pd.concat([trade_data,tp_data],axis=1)
             
@@ -285,7 +302,7 @@ class StockDataProc(object):
         #获取工作日列表（df）
         work_days=self.get_workdays(start,end)
         #以工作日列表为标准，合并所有交易数据df
-        data_merged=self.ba.merge_format(work_days,trade_data,merge_on='date',df_names=tickers)
+        data_merged=self.base.merge_format(work_days,trade_data,merge_on='date',df_names=tickers)
         
         data_merged = data_merged.set_index(['date'])
         return data_merged
@@ -294,8 +311,8 @@ class StockDataProc(object):
     def get_monthtrade_stock(self,months,tickers='',trade_field=['date','close']):
         if not tickers:
             tickers=self.get_tickerall(tp=False)
-        end=self.ba.today_as_str()
-        start=self.ba.today_as_str(end,gap_type=1,gap_val=-months)
+        end=self.base.today_as_str()
+        start=self.base.today_as_str(end,gap_type=1,gap_val=-months)
         data=self.get_daytrade_stock(tickers,start=start,end=end,trade_field=trade_field)
         return data
     
@@ -324,7 +341,7 @@ class StockDataProc(object):
     #获取某一天一组股票的交易日线close
     def get_datetrade_allstock(self,tickers='',date='',trade_field=['date','close','volume']):
         if not date:
-            date=self.ba.today_as_str()
+            date=self.base.today_as_str()
             
         if self.get_workdays(date,date) is None:
             print '输入日期非交易日期！'
@@ -341,7 +358,7 @@ class StockDataProc(object):
     #获取某一天所有股票的交易日涨跌幅，按照上海版、深圳主板、创业板返回
     def get_datetrade_stock(self,date='',trade_field=['date','close','volume']):
         if not date:
-            date=self.ba.today_as_str()
+            date=self.base.today_as_str()
         start=self.get_workdays_last(date).strftime(date_format)
             
         tickerall=self.get_tickerall(tp=False)
@@ -364,7 +381,7 @@ class StockDataProc(object):
     #获取某一天所有股票的交易信息和基本信息
     def get_daytrade_infoall(self,tickers='',date='',trade_field=['date','price_change','volume']):
         if not date:
-            date=self.ba.today_as_str()
+            date=self.base.today_as_str()
             
         if self.get_workdays(date,date) is None:
             print '输入日期非交易日期！'
@@ -396,7 +413,7 @@ class StockDataProc(object):
         #获取工作日列表（df）
         work_days=self.get_workdays(start,end)
         #以工作日列表为标准，合并所有交易数据df
-        data_merged=self.ba.merge_format(work_days,trade_data,merge_on='date',df_names=tickers)
+        data_merged=self.base.merge_format(work_days,trade_data,merge_on='date',df_names=tickers)
         return data_merged
     
 

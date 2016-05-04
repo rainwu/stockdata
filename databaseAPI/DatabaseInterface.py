@@ -102,15 +102,20 @@ class DatabaseInterface(object):
     
     
         
-    def db_findone(self,filter_dic,collnam,sel_fields):
+    def db_findone(self,filter_dic,sel_fields,collnam):
         coll=self.db_connect()[collnam]
         op=coll.find_one
-        op_para={'filter':filter_dic}
+        
+        f_in=lambda x:{'$in':x} if self.base.is_iter(x) else x
+        filter_dic_vals=[f_in(v) for v in filter_dic.values()]
+        filter_dic_new=self.base.lists_2dict(filter_dic.keys(),filter_dic_vals)
+        
+        op_para={'filter':filter_dic_new}
         result=self._db_connect(op,op_para)
-        if type(sel_fields)==str:
-            return result[sel_fields]
-        else:
+        if self.base.is_iter(sel_fields):
             return [result[k] for k in sel_fields]
+        else:
+            return result[sel_fields]
     
     def db_updateiter(self,filter_dicl,update_dicl,collnam):
         #配置控制记录

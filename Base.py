@@ -63,6 +63,12 @@ class Base(object):
         
         def lists_minus(self,lleft,lright):
             return [l for l in lleft if l not in lright]
+        
+        #相加后没有重复项
+        #l2可以是非iter
+        def lists_add(self,l1,l2):
+            l2=l2 if self.is_iter(l2) else [l2]
+            return list(set(l1+l2))
             
         def any_2list(self,obj):
             return obj if self.is_iter(obj) else [obj] 
