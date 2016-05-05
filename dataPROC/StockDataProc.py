@@ -106,22 +106,42 @@ class StockDataProc(object):
         data_df=pd.DataFrame({'code':data_dict.keys(),'industryName2':data_dict.values()})
         return data_df
     
+    #获取某个股指的交易日线
     #所有trade类必须有date项
     def get_index_trade_day(self,code,start,end='',field=['date','close','volume'],pct=True,
                             pct_fields=[]):
-        field=self.base.lists_add(field,'date')
+        datenam='date'
+        field=self.base.lists_add(field,datenam)
         
         data=self.wp.itfHDatInd_proc(code,start,end,field)
         
         data_rev=data.iloc[::-1]
-        data_rev.set_index('date',inplace=True)
+        data_rev.set_index(datenam,inplace=True)
         if pct:
             if not pct_fields:
                 pct_fields=data_rev.columns
-            data_rev[pct_fields]=data_rev[pct_fields].pct_change(1)*100
+            data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
+        return data_rev
+    
+    #获取沪深融资融券汇总交易数据
+    #所有trade类必须有opDate项
+    def get_rzrq_trade_day(self,start,end='',field=['opDate','rzye','rzmre','rqyl','rqmcl'],
+                            pct=True,pct_fields=[]):
+        datenam='opDate'
+        field=self.base.lists_add(field,datenam)
+        
+        data=self.wp.itfShMar_proc(start,end,field)
+        
+        data_rev=data.iloc[::-1]
+        data_rev.set_index(datenam,inplace=True)
+        
+        if pct:
+            if not pct_fields:
+                pct_fields=data_rev.columns
+            data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
         return data_rev
 
-    
+    #==========================================================#
     
         
     #【实现函数】按类别获取股票列表

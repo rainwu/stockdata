@@ -20,6 +20,22 @@ class StockDataStat(object):
         self.token=settings.token
         self.ba=Base()
        # self.proc=StockDataProc()
+    
+    #对某些列进行计算后作为新的列加入df
+    def _df_calcadd(self,df,colnams,new_colid,calc_op,calc_op_para={}):
+        new_cols=calc_op(df[colnams],**calc_op_para)
+        new_colnams=[n+new_colid for n in colnams]
+        df[new_colnams]=new_cols
+        return df
+    
+    def calc_cumsum(self,df,axis=0):
+        return df.cumsum(axis=axis)
+    
+    def proc_df_addcumsum(self,df,colnams):
+        new_colid='cum'
+        calc_op=self.calc_cumsum
+        return self._df_calcadd(df,colnams,new_colid,calc_op)
+        
         
     #按行或列计算df每列/行的变化率
     #计算方向是第一行/列比第二行的变化率，因此计算后最后一行数据会是空值
