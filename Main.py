@@ -12,7 +12,6 @@ except KeyError:
 from databaseAPI.DatabaseInit import DatabaseInit
 from dataPROC.StockDataProc import StockDataProc
 from dataPROC.StockDataStat import StockDataStat
-from dataAPI.StockInterfaceYH import StockInterfaceYH
 import databaseAPI.db_tables as tables
 
 
@@ -67,8 +66,10 @@ res.to_csv('rzrq.csv',encoding='utf-8')
 
 #MSCI新兴市场指数
 ticker='EEM'
-yh=StockInterfaceYH()
-res=yh.get_tradedata(ticker,start,end)
+calc_fields=['Close']
+pct_fields=['Close']
+res=ins.get_YH_trade_day(ticker,start,end,pct_fields=pct_fields)
+res=stat.proc_df_addcumsum(res,calc_fields)
 res.to_csv('yh.csv',encoding='utf-8')
 
 #重要概念：沪港通、次新股、石油、煤炭、钢铁

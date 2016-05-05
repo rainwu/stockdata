@@ -8,7 +8,7 @@ import os
 import tushare as ts
 
 
-work_path='C:\Users\warriorzhai\Desktop\mmDATA\gitver'
+work_path='E:\gitmoney'
 os.environ["WORK_PATH"] = work_path
 
 token='8fdc3afafa5d9b8ed5ef1114454328faae1aef0fe39ff4b7989a5b9c9ed343ae'

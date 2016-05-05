@@ -135,6 +135,8 @@ class StockInterfaceWrap(object):
                 col_sel=[col.index(s) for s in sel]
                 data=data[col_sel].iloc[::-1]
             else:
+                print data.columns
+                print res_col_sel
                 data=data[res_col_sel]
             
         return data
@@ -403,8 +405,8 @@ class StockInterfaceWrap(object):
         api_itf=self.apiyh.get_tradedata
         api_itf_paras={'ticker':ticker,'start':start,'end':end}
         res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
-                      row_between_ops,date_proc=True)
-        res.columns=self.ba.to_lower(res.columns)
+                      row_between_ops)
+#        res.columns=self.ba.to_lower(res.columns)
         return res
 
         

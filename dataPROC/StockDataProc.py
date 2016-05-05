@@ -111,7 +111,8 @@ class StockDataProc(object):
     def get_index_trade_day(self,code,start,end='',field=['date','close','volume'],pct=True,
                             pct_fields=[]):
         datenam='date'
-        field=self.base.lists_add(field,datenam)
+        if field:
+            field=self.base.lists_add(field,datenam)
         
         data=self.wp.itfHDatInd_proc(code,start,end,field)
         
@@ -128,7 +129,8 @@ class StockDataProc(object):
     def get_rzrq_trade_day(self,start,end='',field=['opDate','rzye','rzmre','rqyl','rqmcl'],
                             pct=True,pct_fields=[]):
         datenam='opDate'
-        field=self.base.lists_add(field,datenam)
+        if field:
+            field=self.base.lists_add(field,datenam)
         
         data=self.wp.itfShMar_proc(start,end,field)
         
@@ -140,6 +142,26 @@ class StockDataProc(object):
                 pct_fields=data_rev.columns
             data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
         return data_rev
+    
+    def get_YH_trade_day(self,ticker,start='',end='',field=['Date','Close','Volume'],
+                         pct=True,pct_fields=[]):
+        datenam='Date'
+        if field:
+            field=self.base.lists_add(field,datenam)
+            print field
+        data=self.wp.itfYHtradat_proc(ticker,start,end,field)
+        data_rev=data.iloc[::-1]
+        data_rev.set_index(datenam,inplace=True)
+        
+        data_rev=data_rev.convert_objects(convert_numeric=True)
+
+        
+        if pct:
+            if not pct_fields:
+                pct_fields=data_rev.columns
+            data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
+        return data_rev
+
 
     #==========================================================#
     
