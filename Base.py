@@ -156,6 +156,10 @@ class Base(object):
             except ValueError:
                 print '无法将字符转为数值'
                 return False
+                
+        def str_to_datetime(self,s,dateformat=date_format):
+            date=datetime.datetime.strptime(s,dateformat)
+            return date
         
         #数值转为位数为l的string，不足长度的部分用pad填充     
         #front--在前方补零，back--在后方补零
@@ -168,6 +172,11 @@ class Base(object):
                 return pad*(l-len(to_str))+to_str
             else:
                 return to_str+pad*(l-len(to_str))
+        
+        def strlist_build(self,s,varlist):
+            print varlist
+            f=lambda x: tuple(x) if self.is_iter(x) else (x,)
+            return [s % f(var) for var in varlist]
         
         #将list of string连接为逗号分隔的string格式
         #参数说明：
@@ -204,7 +213,9 @@ class Base(object):
             return dict(zip(keys, vals)) 
         
         #将pandas的df的每行转为字典列表返回
-        def pd_df2diclist(self,df):
+        def pd_df2diclist(self,df,index=False):
+            if index:
+                df.reset_index(level=0, inplace=True)
             return df.T.to_dict().values()
         
         #keys=[key1,key2]

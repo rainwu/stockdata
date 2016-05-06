@@ -172,11 +172,20 @@ class DatabaseInit(object):
         print '初始化grps表'
         return self.init_tableandcrtl(table_struct,index_vals)
     
+    def init_stockhgt(self):
+        self.init_stockhgt_update()
+        
+    
     def init_stockinfo_update(self,funcs):
         pass
 
     def init_stockgrps_update(self):
         pass
+
+    def init_stockhgt_update(self,collnam):
+        data=self.proc.get_dfc_hgt_day()
+        insert_data=self.base.pd_df2diclist(data,index=True)
+        self.dbobj.db_insertmany(insert_data,collnam)
     
     def update_stockgrps_tickers(self,db_table,grpnam):
         

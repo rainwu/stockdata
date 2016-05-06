@@ -14,6 +14,7 @@ except KeyError:
 from Base import Base
 from dataAPI.StockInterfaceTS import StockInterfaceTS
 from dataAPI.StockInterfaceYH import StockInterfaceYH
+from dataAPI.StockInterfaceWB import StockInterfaceWB
 import settings
 #此文件接收接口数据进行自定义二次加工处理，主要是行和列的抽取
 
@@ -25,6 +26,7 @@ class StockInterfaceWrap(object):
         self.ba=Base()
         self.api=StockInterfaceTS()
         self.apiyh=StockInterfaceYH()
+        self.apiwb=StockInterfaceWB()
     
 
     #从dataframe中，抽取满足条件的行
@@ -409,7 +411,14 @@ class StockInterfaceWrap(object):
 #        res.columns=self.ba.to_lower(res.columns)
         return res
 
-        
+    #沪股通每日余额，流入流出
+    def itfWBdfchgt_proc(self,field=[],
+                     res_row_sel={},row_between_ops=[]):
+        api_itf=self.apiwb.get_dfcf_hgt
+        res=self._itfdata_proc(api_itf,res_col_sel=field,res_row_sel=res_row_sel,
+                      row_between_ops=row_between_ops)
+        return res
+
         
         
         

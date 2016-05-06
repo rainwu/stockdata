@@ -70,13 +70,17 @@ calc_fields=['Close']
 pct_fields=['Close']
 res=ins.get_YH_trade_day(ticker,start,end,pct_fields=pct_fields)
 res=stat.proc_df_addcumsum(res,calc_fields)
-res.to_csv('yh.csv',encoding='utf-8')
+res.to_csv('msci.csv',encoding='utf-8')
 
 #重要概念：沪港通、次新股、石油、煤炭、钢铁
 
-#沪港通流入流出
+#股东数据  http://f10.eastmoney.com/f10_v2/ShareholderResearch.aspx?code=sh600639&timetip=635981376106544523
 
-#股指期货，期权
+#沪港通流入流出，from 东方财富
+res=ins.get_dfc_hgt_day(start,end)
+res.to_csv('hgt.csv',encoding='utf-8')
+
+#股指期货，上证50期权
 
 #人民币在岸、离岸兑美元交易数据
 

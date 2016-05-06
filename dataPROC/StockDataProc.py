@@ -28,6 +28,20 @@ class StockDataProc(object):
         self.base=Base()
         self.wp=StockInterfaceWrap()
         self.stat=StockDataStat()
+        
+    #给起始和终止日期，返回期间的行
+    #colnam是date类型所在的列
+    def _sel_row_bydate(self,df,start,end=''):
+        #将输入日期转为datetime
+        if not end:
+            end=self.base.today_as_str()
+        start_dt=self.base.str_to_datetime(start)
+        end_dt=self.base.str_to_datetime(end)
+        
+        date_col=pd.to_datetime(df.index)  
+        mask = (date_col>= start_dt) & (date_col <= end_dt)
+        
+        return df.ix[mask] 
     
     #获取所有深市股票代码
     def get_tickersz(self,tickerall):
@@ -143,6 +157,7 @@ class StockDataProc(object):
             data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
         return data_rev
     
+    #获取雅虎交易数据
     def get_YH_trade_day(self,ticker,start='',end='',field=['Date','Close','Volume'],
                          pct=True,pct_fields=[]):
         datenam='Date'
@@ -161,6 +176,30 @@ class StockDataProc(object):
                 pct_fields=data_rev.columns
             data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
         return data_rev
+    
+    #获取沪股通日流入流出数据
+    #所有trade类必须有date项
+    def get_dfc_hgt_day(self,start='',end='',field=['date','buy_amt','sell_amt','bal_today','bal_total'],
+                            pct=False,pct_fields=[]):
+        datenam='date'
+        if field:
+            field=self.base.lists_add(field,datenam)
+        
+        if not start:
+            start='2014-01-01'
+        
+        data=self.wp.itfWBdfchgt_proc(field)
+        
+        data_rev=data.iloc[::-1]
+        data_rev.set_index(datenam,inplace=True)
+        
+        data_sel=self._sel_row_bydate(data_rev,start,end)
+        
+        if pct:
+            if not pct_fields:
+                pct_fields=data_sel.columns
+            data_sel.loc[:,pct_fields]=data_sel[pct_fields].pct_change(1)*100
+        return data_sel
 
 
     #==========================================================#
