@@ -72,8 +72,7 @@ class DatabaseInterface(object):
         
     def db_insertarray_one(self,filter_dic,update_dic,collnam):
         update_id='$addToSet'
-        update={update_id:update_dic}
-        result=self.db_updateone(filter_dic,update,collnam)
+        result=self.db_updateone(filter_dic,update_dic,collnam,op=update_id)
         return result
     
     def db_insertarray_many(self,filter_dic,update_dic,collnam):
@@ -81,22 +80,26 @@ class DatabaseInterface(object):
         update_val_id='$each'
         update_val_keys=[update_val_id]*len(update_dic)
         update_val_vals=[self.base.any_2list(o) for o in update_dic.values()]
-        update={update_id:self.base.lists_2dict(update_dic.keys(),self.base.lists_2dictlists(update_val_keys,update_val_vals))}
-        result=self.db_updateone(filter_dic,update,collnam)
+        update=self.base.lists_2dict(update_dic.keys(),self.base.lists_2dictlists(update_val_keys,update_val_vals))
+        result=self.db_updateone(filter_dic,update,collnam,op=update_id)
         return result
     
     
-    def db_updateone(self,filter_dic,update_dic,collnam,upserts=True):
+    def db_updateone(self,filter_dic,update_dic,collnam,op='$set',upserts=True):
         coll=self.db_connect()[collnam]
         op=coll.update_one
-        op_para={'filter':filter_dic,'update':update_dic}
+        op_para={'filter':filter_dic,'update':{op:update_dic}}
         result=self._db_connect(op,op_para)
         return result
     
-    def db_updatemany(self,filter_dic,update_dic,collnam,upserts=True):
+    def db_updatemany(self,filter_dic,update_dic,collnam,op='$set',upserts=True):
         coll=self.db_connect()[collnam]
         op=coll.update_many
-        op_para={'filter':filter_dic,'update':update_dic,'upserts':upserts}
+        
+        key_list=[op]*len(update_dic)
+        update=self.base.lists_2dictlists(key_list,update_dic)
+        
+        op_para={'filter':filter_dic,'update':update,'upserts':upserts}
         result=self._db_connect(op,op_para)
         return result
     
@@ -120,10 +123,10 @@ class DatabaseInterface(object):
     def db_updateiter(self,filter_dicl,update_dicl,collnam):
         #配置控制记录
         ctrl_filter_dic={'collnam': collnam}
-        ctrl_update_dic={'$inc': {'step': 1}}
-        ctrl_updateover_dic={'$set': {'step': 0}}
+        ctrl_update_dic={'step': 1}
+        ctrl_updateover_dic={'step': 0}
         ctrl_findsel='step'
-        #获取断点
+        #获取断点/
         ctrl_table_struct=tables.control_table_struct
         step=self.db_findone(ctrl_filter_dic,ctrl_table_struct['collnam'],ctrl_findsel)
         print '断点开始于'+str(step)
@@ -135,7 +138,7 @@ class DatabaseInterface(object):
             print '更新数据.....'
             self.db_updateone(f,u,collnam)
             print '更新计数.....'
-            self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'])
+            self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'],op='$inc')
             process=process+1
             print '已完成'+str(round(process*100/total_len,2))+'%.....'
         print '数据更新完毕，重置计数器.....'

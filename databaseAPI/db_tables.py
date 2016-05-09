@@ -31,7 +31,8 @@ stockinfo_crawlnew_struct={
     'db_EquInd':['ticker','industryName1','industryName2'],
 }
 stockinfo_crawldaily_struct={
-    'ts_StoBas':['code','outstanding', 'totals','timeToMarket']
+    'ts_StoBas':['code','outstanding', 'totals','timeToMarket'],
+    'db_StoBas':['ticker','outstanding', 'totals','timeToMarket']
 }
 
 #stockgrps
@@ -52,6 +53,12 @@ stockgrps_crawlnew_struct={
 stockgrps_crawldaily_struct={
    
 }
+
+#stockhgt
+stockhgt_table_struct={
+    'collnam':'stockhgt'
+    }
+
 
 
 tables_all=[control_table_struct['collnam'],
