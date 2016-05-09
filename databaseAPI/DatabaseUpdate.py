@@ -16,7 +16,10 @@ import pymongo
 import databaseAPI.db_tables as tables
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
+from dataPROC.StockDataProc import StockDataProc
+from dataPROC.DatabaseProc import DatabaseProc
 from databaseAPI.DatabaseInterface import DatabaseInterface
+
 
 
 class DatabaseUpdate(object):
@@ -24,6 +27,8 @@ class DatabaseUpdate(object):
     def __init__(self):
         self.dbobj=DatabaseInterface()
         self.wp=StockInterfaceWrap()
+        self.proc=StockDataProc()
+        self.db_proc=DatabaseProc()
         self.base=Base()
     
     
@@ -76,7 +81,11 @@ class DatabaseUpdate(object):
         print '批量更新数据....'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
         
-    
+    def get_newtickers(self):
+        db_tickers=self.db_proc.get_tickerall()
+        ts_tickers=self.proc.get_tickerall()
+        new_tickers=self.base.lists_minus(ts_tickers,db_tickers)
+        return new_tickers
         
     
     def insert_stockinfo_conceptArr(self,ticker,add_concepts):
@@ -119,25 +128,14 @@ class DatabaseUpdate(object):
                            crawl_itf,crawl_itf_paras)
     
     
-    def update_stockinfo_industry(self,lev):
+    def update_stockinfo_industry(self,data):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
         #数据库参数表
         db_table=tables.stockinfo_table_struct
-        
-        #获取数据抓取field
-        crawl_field=self.base.sel_list(crawl_table['tl_EquInd'],[0,lev])
-        #数据抓取field对应的数据库field名称
-        crawl_field_2db=self.base.sel_list(crawl_table['db_EquInd'],[0,lev])
 
-        #------数据抓取------
-        
-        crawl_itf=self.wp.itfEquInd_proc
-        crawl_itf_paras={'field':crawl_field}
-
-        self._update_updateiter(db_table,crawl_field,crawl_field_2db,
-                           crawl_itf,crawl_itf_paras)
+        self._update_updateiter(db_table,data)
         
 
         
@@ -159,7 +157,13 @@ class DatabaseUpdate(object):
         self._update_updateiter(db_table,crawl_field,crawl_field_2db,
                            crawl_itf,crawl_itf_paras)
                           
-        
+    def update_newtickers(self):
+        new_tickers=self. get_newtickers()
+        if new_tickers:
+            
+        else:
+            print '没有新增ticker'
+            return -1
     
 
     

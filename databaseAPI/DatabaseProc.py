@@ -26,12 +26,34 @@ class DatabaseProc(object):
         self.wp=StockInterfaceWrap()
         self.base=Base()
     
-    def get_tickers(self):
-        db_table=stockgrps_table_struct
+    
+    #返回list
+    def _get_grp(self,grpnam,grpsubnams):
+        db_table=tables.stockgrps_table_struct
         collnam=db_table['collnam']
-        filter_dic={ "grpnam": "tickers"}   
-        sel_fields=['']
-        db_findone(filter_dic,sel_fields,collnam)
+        filter_dic={ "grpnam":grpnam}   
+        sel_fields=self.base.any_2list(grpsubnams)
+        return self.dbobj.db_findone(filter_dic,sel_fields,collnam)[0]
+    
+    
+    def get_tickerall(self):
+        grpnam='tickers'
+        grpsubnams=['tk_all']
+        return self._get_grp(grpnam,grpsubnams)
+    
+    
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         

@@ -260,7 +260,18 @@ class DatabaseInit(object):
         #批量更新
     
     def update_stockinfo_EquInd(self):
-        self.up.update_stockinfo_industry(lev=1)
+        
+        crawl_table=stockinfo_crawlnew_struct
+        #获取数据抓取field
+        crawl_field=self.base.sel_list(crawl_table['tl_EquInd'],[0,lev])
+        #数据抓取field对应的数据库field名称
+        crawl_field_2db=self.base.sel_list(crawl_table['db_EquInd'],[0,lev])
+        
+        print '原始数据抓取....'
+        crawl_data=self.wp.itfStoBas_proc(field=crawl_field)
+        
+        
+        self.up.update_stockinfo_industry(crawl_data)
         self.up.update_stockinfo_industry(lev=2)
     
     def update_stockinfo_ConCla(self):
