@@ -17,7 +17,7 @@ import databaseAPI.db_tables as tables
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataProc import StockDataProc
-from dataPROC.DatabaseProc import DatabaseProc
+from databaseAPI.DatabaseProc import DatabaseProc
 from databaseAPI.DatabaseInterface import DatabaseInterface
 
 
@@ -57,22 +57,13 @@ class DatabaseUpdate(object):
         
         self.dbobj.db_insertarray_many(filter_dic,update_dic,updatecollnam)
         
-    def _update_updateiter(self,db_table,crawl_field,crawl_field_2db,
-                           crawl_itf,crawl_itf_paras={}):
+    def _update_updateiter(self,db_table,crawl_data):
         #获取数据库索引项名称，更新时按照此索引更新
         keyindex=db_table['keyindex']
         #获取需要更新的数据库的表名
         updatecollnam=db_table['collnam']
         
         print updatecollnam+':StoBas part 开始初次插入数据.....'
-        #------数据抓取------
-        print '原始数据抓取....'
-        crawl_data=crawl_itf(**crawl_itf_paras)
-        
-        #------抓取数据处理------
-        #转为数据库的项名
-        crawl_data.columns=crawl_field_2db
-
         #------数据批量更新------
         #建立批量数据更新语句
         df_proc=crawl_data
@@ -80,12 +71,32 @@ class DatabaseUpdate(object):
          #批量更新
         print '批量更新数据....'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
+    
+    def _insert_initwithindex(self,tb,index_vals,index_id=0):
+         insertcollnam=tb['collnam']
+         insertitemnams=tb['itemnams']
+         insertitemvals=tb['itemvals']
+         #使用insert命令插入若干数据
+         #构建insertone语句插入若干文件，格式：[{itemnam1:value1,itemnam2:value2},{itemnam1:value3,itemnam2:value4}]
+         insert_keys=[insertitemnams]*len(index_vals)
+         index_vals=self.base.any_2list(index_vals)
+         #index必须给值
+         insert_vals=[[v]+insertitemvals for v in index_vals]
+         insert_data=self.base.lists_2dictlists(insert_keys,insert_vals)
+         #插入数据
+         self.dbobj.db_insertmany(insert_data,insertcollnam)
+         self.dbobj.db_ensure_index(insertcollnam,insertitemnams[index_id],unique=True)
+         
         
     def get_newtickers(self):
         db_tickers=self.db_proc.get_tickerall()
         ts_tickers=self.proc.get_tickerall()
         new_tickers=self.base.lists_minus(ts_tickers,db_tickers)
         return new_tickers
+    
+    def insert_stockinfo(self,tickers):
+        table_struct=tables.stockinfo_table_struct
+        self._insert_initwithindex(table_struct,tickers)
         
     
     def insert_stockinfo_conceptArr(self,ticker,add_concepts):
@@ -110,57 +121,97 @@ class DatabaseUpdate(object):
         self._update_arrayinsert(db_table,filter_val,update_key,update_val)
 
     
-    def update_stockinfo_numerics(self):
+    def update_stockinfo_numerics(self,tickers=''):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawldaily_struct
+        #数据库参数表
+        db_table=tables.stockinfo_table_struct
+        
+        #获取数据抓取field
+        crawl_field=crawl_table['ts_StoBas']
+        #数据抓取field对应的数据库field名称
+        crawl_field_2db=crawl_table['db_StoBas']
+        
+        res_row_sel={crawl_field[0]:tickers}
+        
+        print updatecollnam+':StoBas part 开始初次插入数据.....'
+        #------数据抓取------
+        print '原始数据抓取....'
+        crawl_data=self.wp.itfStoBas_proc(field=crawl_field,res_row_sel=res_row_sel)
+        
+        #------抓取数据处理------
+        #转为数据库的项名
+        crawl_data.columns=crawl_field_2db
+
+        self._update_updateiter(db_table,crawl_data)
+    
+    def update_stockinfo_basic(self,tickers=''):
+        #配置基本参数
+        #------抓取参数表-----
+        crawl_table=tables.stockinfo_crawlnew_struct
         #数据库参数表
         db_table=tables.stockinfo_table_struct
         #获取数据抓取field
         crawl_field=crawl_table['ts_StoBas']
         #数据抓取field对应的数据库field名称
         crawl_field_2db=crawl_table['db_StoBas']
-
-        crawl_itf=self.wp.itfStoBas_proc
-        crawl_itf_paras={'field':crawl_field}
-
-        self._update_updateiter(db_table,crawl_field,crawl_field_2db,
-                           crawl_itf,crawl_itf_paras)
+        
+        res_row_sel={crawl_field[0]:tickers}
+        
+        crawl_data=self.wp.itfStoBas_proc(field=crawl_field,res_row_sel=res_row_sel)
+                #------抓取数据处理------
+        #转为数据库的项名
+        crawl_data.columns=crawl_field_2db
+        self._update_updateiter(db_table,crawl_data)
     
-    
-    def update_stockinfo_industry(self,data):
+    def update_stockinfo_industry(self,tickers='',lev=1):
         #配置基本参数
         #------抓取参数表-----
         crawl_table=tables.stockinfo_crawlnew_struct
         #数据库参数表
         db_table=tables.stockinfo_table_struct
+        #获取数据抓取field
+        crawl_field=crawl_table['tl_EquInd'][0]+crawl_table['tl_EquInd'][lev]
+        #数据抓取field对应的数据库field名称
+        crawl_field_2db=crawl_table['db_EquInd']
+        
+        res_row_sel={crawl_field[0]:tickers}
+        
+        crawl_data=self.wp.itfEquInd_proc(field=crawl_field,res_row_sel=res_row_sel)
+                #------抓取数据处理------
+        #转为数据库的项名
+        crawl_data.columns=crawl_field_2db
+        self._update_updateiter(db_table,crawl_data)
 
-        self._update_updateiter(db_table,data)
         
 
         
-    def update_stockinfo_concept(self):
+    def update_stockinfo_concept(self,tickers=''):
         #配置基本参数
-        #------抓取参数表-----
-        crawl_table=tables.stockinfo_crawlnew_struct
         #数据库参数表
         db_table=tables.stockinfo_table_struct
-        
+        #------抓取参数表-----
+        crawl_table=tables.stockinfo_crawlnew_struct
         #获取数据抓取field
         crawl_field=crawl_table['ts_ConCla']
         #数据抓取field对应的数据库field名称
         crawl_field_2db=crawl_table['db_ConCla']
         
-        crawl_itf=self.wp.itfConCla_proc
-        crawl_itf_paras={'field':crawl_field}
-
-        self._update_updateiter(db_table,crawl_field,crawl_field_2db,
-                           crawl_itf,crawl_itf_paras)
+        res_row_sel={crawl_field[0]:tickers}
+        
+        crawl_data=self.wp.itfConCla_proc(field=crawl_field,res_row_sel=res_row_sel)
+        #转为数据库的项名
+        crawl_data.columns=crawl_field_2db
+        
+        self._update_updateiter(db_table,crawl_data)
+        
                           
     def update_newtickers(self):
-        new_tickers=self. get_newtickers()
+        new_tickers=self.get_newtickers()
         if new_tickers:
-            
+            table_struct=tables.stockinfo_table_struct
+            self._insert_initwithindex(tb,index_vals,index_id)
         else:
             print '没有新增ticker'
             return -1

@@ -89,28 +89,16 @@ class DatabaseInit(object):
         vals=self.hd_df2grp2lists(df,grpkey)
         insertdata=self.base.lists_todiclist(itemnams,vals)
         return insertdata
-        
-    def init_many(self,tb,index_vals,index_id=0):
-        #表名，表中每项定义，键值
+    
+    #初始化一个表里所有的条目和其index值
+    def init_table(self,tb,index_vals,index_id=0):
+                #表名，表中每项定义，键值
         insertcollnam=tb['collnam']
-        insertitemnams=tb['itemnams']
-        insertitemvals=tb['itemvals']
-        
         if self.dbobj.db_count(insertcollnam)>0:
             print '清空集合'
             self.base.db_drop(insertcollnam)
-        
-        #使用insert命令插入若干数据
-        #构建insertone语句插入若干文件，格式：[{itemnam1:value1,itemnam2:value2},{itemnam1:value3,itemnam2:value4}]
-        insert_keys=[insertitemnams]*len(index_vals)
-        index_vals=self.base.any_2list(index_vals)
-        #index必须给值
-        insert_vals=[[v]+insertitemvals for v in index_vals]
-        
-        insert_data=self.base.lists_2dictlists(insert_keys,insert_vals)
-        #插入数据
-        self.dbobj.db_insertmany(insert_data,insertcollnam)
-        self.dbobj.db_ensure_index(insertcollnam,insertitemnams[index_id],unique=True)
+        self.up._insert_initwithindex(tb,index_vals,index_id)
+
         
 
             
@@ -137,7 +125,7 @@ class DatabaseInit(object):
     
     def init_tableandcrtl(self,tb,index_vals,index_id=0):
         print '创建表....'
-        self.init_many(tb,index_vals)
+        self.init_table(tb,index_vals)
         print '创建控制表....' 
         self.insert_ctrl_one(tb['collnam'])
             
@@ -275,6 +263,7 @@ class DatabaseInit(object):
         self.up.update_stockinfo_industry(lev=2)
     
     def update_stockinfo_ConCla(self):
+        
         self.up.update_stockinfo_concept()
         
 
