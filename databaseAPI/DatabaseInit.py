@@ -90,7 +90,7 @@ class DatabaseInit(object):
         insertdata=self.base.lists_todiclist(itemnams,vals)
         return insertdata
         
-    def insert_many(self,tb,index_vals,index_id=0):
+    def init_many(self,tb,index_vals,index_id=0):
         #表名，表中每项定义，键值
         insertcollnam=tb['collnam']
         insertitemnams=tb['itemnams']
@@ -137,7 +137,7 @@ class DatabaseInit(object):
     
     def init_tableandcrtl(self,tb,index_vals,index_id=0):
         print '创建表....'
-        self.insert_many(tb,index_vals)
+        self.init_many(tb,index_vals)
         print '创建控制表....' 
         self.insert_ctrl_one(tb['collnam'])
             

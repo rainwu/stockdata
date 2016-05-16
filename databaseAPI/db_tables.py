@@ -59,6 +59,15 @@ stockhgt_table_struct={
     'collnam':'stockhgt'
     }
 
+#stockholders  待议
+stockholders_table_struct={
+    'collnam':'stockholders',
+    'itemnams':['ticker','holders','holders_lt','holders_fd','holders_td'],
+    'itemvals':[[],[],[],[]]
+    }
+    
+
+
 
 
 tables_all=[control_table_struct['collnam'],
