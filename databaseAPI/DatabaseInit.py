@@ -158,19 +158,8 @@ class DatabaseInit(object):
         insert_data=self.base.pd_df2diclist(data,index=True)
         self.dbobj.db_insertmany(insert_data,collnam)
     
-    def update_stockgrps_tickers(self,db_table,grpnam):
-        
-        #build insert data
-        insert_keys=['tk_all','tk_sh','tk_sz','tk_cyb']
-        print '原始数据抓取....'
-        grps_val_tkall=self.proc.get_tickerall()
-        grps_val_tksh=self.proc.get_tickersh(grps_val_tkall)
-        grps_val_tksz=self.proc.get_tickersz(grps_val_tkall)
-        grps_val_tkcyb=self.proc.get_tickercyb(grps_val_tkall)
-        insert_vals=[grps_val_tkall,grps_val_tksh,grps_val_tksz,grps_val_tkcyb]
-        print '插入组数据'+grpnam
-        #插入数组数据
-        self.up.update_stockgrps(db_table,grpnam,insert_keys,insert_vals)
+    def update_stockgrps_tickers(self):
+        self.up.insert_stockgrps_tickers()
 
     
     def update_stockgrps_concepts(self,db_table,crawl_field,crawl_field_2db,grpnam):   
@@ -202,68 +191,13 @@ class DatabaseInit(object):
         
 
     def update_stockinfo_StoBas(self):
-        
-        #配置基本参数
-        #------抓取参数表-----
-        crawl_table=tables.stockinfo_crawlnew_struct
-        #数据库参数表
-        db_table=tables.stockinfo_table_struct
-        
-        #获取数据抓取field
-        crawl_field=crawl_table['ts_StoBas']
-        #数据抓取field对应的数据库field名称
-        crawl_field_2db=crawl_table['db_StoBas']
-        #获取数据库索引项名称，更新时按照此索引更新
-        keyindex=db_table['keyindex']
-        #获取需要更新的数据库的表名
-        updatecollnam=db_table['collnam']
-        
-        print updatecollnam+':StoBas part 开始初次插入数据.....'
-        #------数据抓取------
-        
-        print '原始数据抓取....'
-        crawl_data=self.wp.itfStoBas_proc(field=crawl_field)
-
-        #-------------------
-        
-        #------抓取数据处理------
-        #转为数据库的项名
-        crawl_data.columns=crawl_field_2db
-        
-        #------------------------
-
-        #------数据批量更新------
-        #建立批量数据更新语句
-        df_proc=crawl_data
-        db_filt_list,db_update_list=self.hd_build_upparas(df_proc,keyindex)
-         #批量更新
-        print '批量更新数据....'
-        self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
-        
-        
-#        filt_StoBas=self.hd_df2dictlist(data_StoBas[keyindex])
-#        update_StoBas=self.hd_df2dictlist(data_StoBas[leftindex])
-#        update_StoBas=[{x[0]:x[1]} for x in zip(['$set']*len(update_StoBas),update_StoBas)]
-#        
-        #批量更新
+        self.up.update_stockinfo_basic()
     
     def update_stockinfo_EquInd(self):
-        
-        crawl_table=stockinfo_crawlnew_struct
-        #获取数据抓取field
-        crawl_field=self.base.sel_list(crawl_table['tl_EquInd'],[0,lev])
-        #数据抓取field对应的数据库field名称
-        crawl_field_2db=self.base.sel_list(crawl_table['db_EquInd'],[0,lev])
-        
-        print '原始数据抓取....'
-        crawl_data=self.wp.itfStoBas_proc(field=crawl_field)
-        
-        
-        self.up.update_stockinfo_industry(crawl_data)
+        self.up.update_stockinfo_industry(lev=1)
         self.up.update_stockinfo_industry(lev=2)
     
     def update_stockinfo_ConCla(self):
-        
         self.up.update_stockinfo_concept()
         
 

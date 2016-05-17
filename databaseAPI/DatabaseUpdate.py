@@ -94,9 +94,17 @@ class DatabaseUpdate(object):
         new_tickers=self.base.lists_minus(ts_tickers,db_tickers)
         return new_tickers
     
-    def insert_stockinfo(self,tickers):
-        table_struct=tables.stockinfo_table_struct
-        self._insert_initwithindex(table_struct,tickers)
+    def insert_stockinfo_init(self,tickers):
+        table_struct_stockinfo=tables.stockinfo_table_struct
+        self._insert_initwithindex(table_struct_stockinfo,tickers)
+
+        
+    def insert_stockinfo_init_update(self,tickers):
+        self.update_stockinfo_basic(tickers)
+        self.update_stockinfo_industry(tickers)
+        self.update_stockinfo_industry(tickers,lev=2)
+        self.update_stockinfo_concept(tickers)
+    
         
     
     def insert_stockinfo_conceptArr(self,ticker,add_concepts):
@@ -115,10 +123,25 @@ class DatabaseUpdate(object):
         update_val=add_industries
         
         self._update_arrayinsert(db_table,filter_val,update_key,update_val)
-        
-    def update_stockgrps_Arr(self,db_table,filter_val,update_key,update_val):
+    
+    def insert_stockgrps_tickers(self,tickers=''):
         db_table=tables.stockgrps_table_struct
-        self._update_arrayinsert(db_table,filter_val,update_key,update_val)
+        grpnam='tickers'
+        #build insert data
+        insert_keys=['tk_all','tk_sh','tk_sz','tk_cyb']
+        
+        if len(tickers)==0:
+            print '原始数据抓取....'
+            tickers=self.db_proc.get_tickerall()
+        
+        grps_val_tksh=self.proc.get_tickersh(tickers)
+        grps_val_tksz=self.proc.get_tickersz(tickers)
+        grps_val_tkcyb=self.proc.get_tickercyb(tickers)
+        insert_vals=[tickers,grps_val_tksh,grps_val_tksz,grps_val_tkcyb]
+        print '插入组数据'+grpnam
+        #插入数组数据
+        self._update_arrayinsert(db_table,grpnam,insert_keys,insert_vals)
+        
 
     
     def update_stockinfo_numerics(self,tickers=''):
@@ -210,8 +233,9 @@ class DatabaseUpdate(object):
     def update_newtickers(self):
         new_tickers=self.get_newtickers()
         if new_tickers:
-            table_struct=tables.stockinfo_table_struct
-            self._insert_initwithindex(tb,index_vals,index_id)
+            self.insert_stockinfo_init(new_tickers)
+            self.insert_stockgrps_tickers()
+            self.insert_stockinfo_init_update(new_tickers)
         else:
             print '没有新增ticker'
             return -1

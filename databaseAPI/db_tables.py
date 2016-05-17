@@ -16,10 +16,12 @@ control_table_struct={
 
 
 #stockinfo
+itemnams=['ticker','name','industryName1','industryName2',
+    'concepts','area','outstanding', 'totals','timeToMarket']
 stockinfo_table_struct={
     'collnam':'stockinfo',
-    'itemnams':['ticker','name','industryName1','industryName2',
-    'concepts','area','outstanding', 'totals','timeToMarket'],
+    'itemnams':itemnams,
+    'itemvals':[None]*(len(itemnams)-1),
     'keyindex':0
     }
 stockinfo_crawlnew_struct={

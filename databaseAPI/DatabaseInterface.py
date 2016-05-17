@@ -72,7 +72,7 @@ class DatabaseInterface(object):
         
     def db_insertarray_one(self,filter_dic,update_dic,collnam):
         update_id='$addToSet'
-        result=self.db_updateone(filter_dic,update_dic,collnam,op=update_id)
+        result=self.db_updateone(filter_dic,update_dic,collnam,opr=update_id)
         return result
     
     def db_insertarray_many(self,filter_dic,update_dic,collnam):
@@ -81,22 +81,22 @@ class DatabaseInterface(object):
         update_val_keys=[update_val_id]*len(update_dic)
         update_val_vals=[self.base.any_2list(o) for o in update_dic.values()]
         update=self.base.lists_2dict(update_dic.keys(),self.base.lists_2dictlists(update_val_keys,update_val_vals))
-        result=self.db_updateone(filter_dic,update,collnam,op=update_id)
+        result=self.db_updateone(filter_dic,update,collnam,opr=update_id)
         return result
     
     
-    def db_updateone(self,filter_dic,update_dic,collnam,op='$set',upserts=True):
+    def db_updateone(self,filter_dic,update_dic,collnam,opr='$set',upserts=True):
         coll=self.db_connect()[collnam]
         op=coll.update_one
-        op_para={'filter':filter_dic,'update':{op:update_dic}}
+        op_para={'filter':filter_dic,'update':{opr:update_dic}}
         result=self._db_connect(op,op_para)
         return result
     
-    def db_updatemany(self,filter_dic,update_dic,collnam,op='$set',upserts=True):
+    def db_updatemany(self,filter_dic,update_dic,collnam,opr='$set',upserts=True):
         coll=self.db_connect()[collnam]
         op=coll.update_many
         
-        key_list=[op]*len(update_dic)
+        key_list=[opr]*len(update_dic)
         update=self.base.lists_2dictlists(key_list,update_dic)
         
         op_para={'filter':filter_dic,'update':update,'upserts':upserts}
