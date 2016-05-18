@@ -132,7 +132,7 @@ class DatabaseUpdate(object):
         
         if len(tickers)==0:
             print '原始数据抓取....'
-            tickers=self.db_proc.get_tickerall()
+            tickers=self.proc.get_tickerall()
         
         grps_val_tksh=self.proc.get_tickersh(tickers)
         grps_val_tksz=self.proc.get_tickersz(tickers)
@@ -240,7 +240,7 @@ class DatabaseUpdate(object):
             print '没有新增ticker'
             return -1
     
-
+#['300512', '603737', '601611', '300516', '300513']
     
     
 

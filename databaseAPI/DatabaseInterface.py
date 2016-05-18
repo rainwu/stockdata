@@ -12,6 +12,7 @@ except KeyError:
 import sys
 import pymongo
 import time
+import pandas as pd
 import databaseAPI.db_settings as settings
 import databaseAPI.db_tables as tables
 from Base import Base
@@ -120,6 +121,31 @@ class DatabaseInterface(object):
         else:
             return result[sel_fields]
     
+    def _db_find_format(self,dictiter,fields):
+        fields=self.base.any_2list(fields)
+        
+        if  len(fields)==1:
+            try:
+                return self.base.unpack_dic(fields[0],dictiter)
+            except KeyboardInterrupt:
+                return self.base.unpack_dic(fields[0],dictiter)
+        else:
+            return pd.DataFrame.from_dict(list(dictiter))[fields]
+        
+    
+    def db_find(self,sel_fields,collnam,filter_dic={}):
+        coll=self.db_connect()[collnam]
+        op=coll.find
+        
+        f_in=lambda x:{'$in':x} if self.base.is_iter(x) else x
+        filter_dic_vals=[f_in(v) for v in filter_dic.values()]
+        filter_dic_new=self.base.lists_2dict(filter_dic.keys(),filter_dic_vals)
+        
+        op_para={'filter':filter_dic_new}
+        result=self._db_connect(op,op_para)
+        
+        return self._db_find_format(result,sel_fields)
+    
     def db_updateiter(self,filter_dicl,update_dicl,collnam):
         #配置控制记录
         ctrl_filter_dic={'collnam': collnam}
@@ -128,7 +154,7 @@ class DatabaseInterface(object):
         ctrl_findsel='step'
         #获取断点/
         ctrl_table_struct=tables.control_table_struct
-        step=self.db_findone(ctrl_filter_dic,ctrl_table_struct['collnam'],ctrl_findsel)
+        step=self.db_findone(ctrl_filter_dic,ctrl_findsel,ctrl_table_struct['collnam'])
         print '断点开始于'+str(step)
         
         total_len=len(filter_dicl)-step
@@ -138,7 +164,7 @@ class DatabaseInterface(object):
             print '更新数据.....'
             self.db_updateone(f,u,collnam)
             print '更新计数.....'
-            self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'],op='$inc')
+            self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'],opr='$inc')
             process=process+1
             print '已完成'+str(round(process*100/total_len,2))+'%.....'
         print '数据更新完毕，重置计数器.....'
