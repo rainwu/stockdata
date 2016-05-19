@@ -146,12 +146,16 @@ class DatabaseInterface(object):
         
         return self._db_find_format(result,sel_fields)
     
-    def db_updateiter(self,filter_dicl,update_dicl,collnam):
+    def db_updateiter(self,filter_dicl,update_dicl,collnam,update_func=None):
         #配置控制记录
         ctrl_filter_dic={'collnam': collnam}
         ctrl_update_dic={'step': 1}
         ctrl_updateover_dic={'step': 0}
         ctrl_findsel='step'
+        
+        if not update_func:
+            update_func=self.db_updateone
+    
         #获取断点/
         ctrl_table_struct=tables.control_table_struct
         step=self.db_findone(ctrl_filter_dic,ctrl_findsel,ctrl_table_struct['collnam'])
@@ -162,7 +166,7 @@ class DatabaseInterface(object):
         #批量更新
         for f,u in zip(filter_dicl[step:],update_dicl[step:]):
             print '更新数据.....'
-            self.db_updateone(f,u,collnam)
+            update_func(f,u,collnam)
             print '更新计数.....'
             self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'],opr='$inc')
             process=process+1

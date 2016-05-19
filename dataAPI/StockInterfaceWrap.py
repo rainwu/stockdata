@@ -118,9 +118,8 @@ class StockInterfaceWrap(object):
         #将数据的row index提取出为列
         if not data.index is None:
             #为index添加名称，默认为‘rownum’
-            if data.index.name is None:
-                data.index.name='rownum'
-            data.reset_index(inplace=True)
+            if not data.index.name is None:
+                data.reset_index(inplace=True)
 
         #抽选行
         data=self._df_rowselect(data,res_row_sel,row_between_ops)

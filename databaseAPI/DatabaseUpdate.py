@@ -195,7 +195,7 @@ class DatabaseUpdate(object):
         #数据库参数表
         db_table=tables.stockinfo_table_struct
         #获取数据抓取field
-        crawl_field=crawl_table['tl_EquInd'][0]+crawl_table['tl_EquInd'][lev]
+        crawl_field=[crawl_table['tl_EquInd'][0]]+[crawl_table['tl_EquInd'][lev]]
         #数据抓取field对应的数据库field名称
         crawl_field_2db=crawl_table['db_EquInd']
         
