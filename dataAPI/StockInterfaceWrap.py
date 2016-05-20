@@ -106,6 +106,7 @@ class StockInterfaceWrap(object):
                       row_between_ops=[],date_proc=False):
         
         #获取接口数据，dataframe
+        print 'get data....'
         data=api_itf(**api_itf_paras)
         
         
@@ -120,9 +121,13 @@ class StockInterfaceWrap(object):
             #为index添加名称，默认为‘rownum’
             if not data.index.name is None:
                 data.reset_index(inplace=True)
-
+        
+        
         #抽选行
+        print 'data row extract....'
         data=self._df_rowselect(data,res_row_sel,row_between_ops)
+        
+        
         
         
         
@@ -139,7 +144,8 @@ class StockInterfaceWrap(object):
                 print data.columns
                 print res_col_sel
                 data=data[res_col_sel]
-            
+        #去除重复
+        data=data.drop_duplicates()
         return data
             
         
@@ -411,10 +417,11 @@ class StockInterfaceWrap(object):
         return res
 
     #沪股通每日余额，流入流出
-    def itfWBdfchgt_proc(self,field=[],
+    def itfWBdfchgt_proc(self,p_max=12,field=[],
                      res_row_sel={},row_between_ops=[]):
         api_itf=self.apiwb.get_dfcf_hgt
-        res=self._itfdata_proc(api_itf,res_col_sel=field,res_row_sel=res_row_sel,
+        api_itf_paras={'p_max':p_max}
+        res=self._itfdata_proc(api_itf,api_itf_paras,res_col_sel=field,res_row_sel=res_row_sel,
                       row_between_ops=row_between_ops)
         return res
 

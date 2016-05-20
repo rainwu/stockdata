@@ -48,10 +48,9 @@ class StockInterfaceWB(object):
     
     
     #获取东方财富沪股通的每日交易数据
-    def get_dfcf_hgt(self):
+    def get_dfcf_hgt(self,p_max=12):
         url1='http://datainterface.eastmoney.com/EM_DataCenter/JS.aspx?type=SHT&sty=SHTHPS&st=2&sr=-1&p=%s'
         url2='&ps=30&js=var%20TEENQUBh={pages:(pc),data:[(x)]}&mkt=1'
-        p_max=12
         urls1=self.base.strlist_build(url1,range(1,p_max+1))
         urls=[url+url2 for url in urls1]
         

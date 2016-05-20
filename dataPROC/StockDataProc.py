@@ -179,7 +179,7 @@ class StockDataProc(object):
     
     #获取沪股通日流入流出数据
     #所有trade类必须有date项
-    def get_dfc_hgt_day(self,start='',end='',field=['date','buy_amt','sell_amt','bal_today','bal_total'],
+    def get_dfc_hgt_day(self,start='',end='',p_max=12,field=['date','buy_amt','sell_amt','bal_today','bal_total'],
                             pct=False,pct_fields=[]):
         datenam='date'
         if field:
@@ -188,7 +188,7 @@ class StockDataProc(object):
         if not start:
             start='2014-01-01'
         
-        data=self.wp.itfWBdfchgt_proc(field)
+        data=self.wp.itfWBdfchgt_proc(p_max=p_max,field=field)
         
         data_rev=data.iloc[::-1]
         data_rev.set_index(datenam,inplace=True)

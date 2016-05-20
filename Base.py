@@ -78,7 +78,28 @@ class Base(object):
                 return True
             else:
                 return False
+        
+        #一组datetime或者strdate中最新的一天
+        #返回strdate
+        def date_newest(self,datelist):
+            if not self.is_iter(datelist):
+                return datelist
             
+            if type(datelist[0]==str):
+                datelist=self.str_to_datetime(datelist)
+            
+            return self.datetime_to_str(max(datelist))
+        
+        def date_minus(self,date1,date2):
+            date1,date2=[self.str_to_datetime(date) if type(date)==str else date for date in [date1,date2]]
+            return (date1-date2).days
+        
+        def date_inc(self,date):
+            return self.today_as_str(base_date=date,gap_val=1)
+            
+        def date_sort(self):
+            pass
+        
             #将一个字典列表中，所有指定key的值导出
             #为防万一，使用如果key不存在于某个字段会报错
             #参数说明：
@@ -158,10 +179,22 @@ class Base(object):
             except ValueError:
                 print '无法将字符转为数值'
                 return False
-                
+        
+        #将str list 或str转为datetime
         def str_to_datetime(self,s,dateformat=date_format):
-            date=datetime.datetime.strptime(s,dateformat)
-            return date
+            f=lambda x:datetime.datetime.strptime(x,dateformat)
+            if self.is_iter(s):
+                return [f(x) for x in s]
+            else:
+                return f(s)
+        
+                #将str list 或str转为datetime
+        def datetime_to_str(self,s,dateformat=date_format):
+            f=lambda x: x.strftime(dateformat)
+            if self.is_iter(s):
+                return [f(x) for x in s]
+            else:
+                return f(s)
         
         #数值转为位数为l的string，不足长度的部分用pad填充     
         #front--在前方补零，back--在后方补零

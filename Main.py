@@ -12,7 +12,16 @@ except KeyError:
 from databaseAPI.DatabaseInit import DatabaseInit
 from dataPROC.StockDataProc import StockDataProc
 from dataPROC.StockDataStat import StockDataStat
+from databaseAPI.DatabaseUpdate import DatabaseUpdate
 import databaseAPI.db_tables as tables
+
+
+#数据库数据每日
+up=DatabaseUpdate()
+#每日，查询新上市的股票，插入信息表
+up.update_newtickers()
+#每日，更新股票基本信息表
+up.update_daily()
 
 
 #数据抓取部分

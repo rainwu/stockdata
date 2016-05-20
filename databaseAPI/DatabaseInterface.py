@@ -117,7 +117,10 @@ class DatabaseInterface(object):
         op_para={'filter':filter_dic_new}
         result=self._db_connect(op,op_para)
         if self.base.is_iter(sel_fields):
-            return [result[k] for k in sel_fields]
+            if len(sel_fields)==0:
+                return result
+            else:
+                return [result[k] for k in sel_fields]
         else:
             return result[sel_fields]
     
@@ -130,7 +133,11 @@ class DatabaseInterface(object):
             except KeyboardInterrupt:
                 return self.base.unpack_dic(fields[0],dictiter)
         else:
-            return pd.DataFrame.from_dict(list(dictiter))[fields]
+            df=pd.DataFrame.from_dict(list(dictiter))
+            if len(fields)==0:
+                return df
+            else:
+                return df[fields]
         
     
     def db_find(self,sel_fields,collnam,filter_dic={}):

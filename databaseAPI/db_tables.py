@@ -21,7 +21,7 @@ itemnams=['ticker','name','industryName1','industryName2',
 stockinfo_table_struct={
     'collnam':'stockinfo',
     'itemnams':itemnams,
-    'itemvals':[None]*(len(itemnams)-1),
+    'itemvals':[None,[],[],[],None,None,None,None],
     'keyindex':0
     }
 stockinfo_crawlnew_struct={
@@ -58,7 +58,9 @@ stockgrps_crawldaily_struct={
 
 #stockhgt
 stockhgt_table_struct={
-    'collnam':'stockhgt'
+    'collnam':'stockhgt',
+    'itemnams':['date', "bal_total","buy_amt","sell_amt","bal_today"],
+    'keyindex':0
     }
 
 #stockholders  待议

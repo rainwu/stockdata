@@ -44,16 +44,16 @@ class StockInterfaceTS(object):
         #请求获取数据
         #如果连接失败：
         #休息sleep_time秒，重复请求settings.try_times次
-        for i in range(settings.try_times):
-            try:
-                res=itf(**itf_paras)
-            except KeyboardInterrupt:
-                print '连接出错，第'+str(i)+'重试中......'
-                time.sleep(settings.sleep_time)
-                continue
-            break
-#        
-        
+#        for i in range(settings.try_times):
+#            try:
+#                res=itf(**itf_paras)
+#            except KeyboardInterrupt:
+#                print '连接出错，第'+str(i)+'重试中......'
+#                time.sleep(settings.sleep_time)
+#                continue
+#            break
+##        
+        res=itf(**itf_paras)
         return res
     
 #=================基本信息===========================
