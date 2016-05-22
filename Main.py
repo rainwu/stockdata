@@ -81,13 +81,16 @@ res=ins.get_YH_trade_day(ticker,start,end,pct_fields=pct_fields)
 res=stat.proc_df_addcumsum(res,calc_fields)
 res.to_csv('msci.csv',encoding='utf-8')
 
+#沪港通流入流出，from 东方财富
+res=ins.get_dfc_hgt_day(start,end)
+res.to_csv('hgt.csv',encoding='utf-8')
+
+
 #重要概念：沪港通、次新股、石油、煤炭、钢铁
 
 #股东数据  http://f10.eastmoney.com/f10_v2/ShareholderResearch.aspx?code=sh600639&timetip=635981376106544523
 
-#沪港通流入流出，from 东方财富
-res=ins.get_dfc_hgt_day(start,end)
-res.to_csv('hgt.csv',encoding='utf-8')
+
 
 #股指期货，上证50期权
 
@@ -96,7 +99,11 @@ res.to_csv('hgt.csv',encoding='utf-8')
 #人民币对一揽子指数
 
 #日本、美国、欧洲股指，MSCI等
-#
+#黄金白银
+#石油
+#房价
+#钢铁期货
+#宏观经济
 
 
 

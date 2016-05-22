@@ -6,11 +6,11 @@ Created on Thu Nov 12 15:39:04 2015
 """
 import os
 import tushare as ts
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
+#import ssl
+#ssl._create_default_https_context = ssl._create_unverified_context
 
 
-work_path='C:\Users\warriorzhai\Desktop\mmDATA\gitver'
+work_path='E:\gitmoney'
 os.environ["WORK_PATH"] = work_path
 
 token='af16a92da767cebb8f57df28c6b2f5ed7fc6e488e1fbc8647efc124fc8adb840'

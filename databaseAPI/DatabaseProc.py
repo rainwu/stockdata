@@ -41,6 +41,27 @@ class DatabaseProc(object):
         grpsubnams=['tk_all']
         return self._get_grp(grpnam,grpsubnams)
     
+    def get_tickerconcept(self,connam):
+        grpnam='concepts'
+        
+        if type(connam)==str:
+            connam=unicode(connam,encoding='utf-8')
+            
+        grpsubnams=[connam]
+        return self._get_grp(grpnam,grpsubnams)
+    
+    #获取当日次新股列表
+    def get_tickercxg(self,date):
+        pass
+    
+    #获取当日开始打新的冻结资金
+    def get_amtdx(self):
+        pass
+    
+    #获取今日上市的新股
+    def get_tickerxg(self):
+        pass
+    
     
         
         

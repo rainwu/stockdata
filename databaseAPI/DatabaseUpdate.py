@@ -290,7 +290,11 @@ class DatabaseUpdate(object):
     
     def insert_stockhgt(self):
         db_table=tables.stockhgt_table_struct
-        start,end,p_max=self.get_newhgtdate()
+        gethgtinfo=self.get_newhgtdate()
+        if gethgtinfo==-1:
+            return -1
+        else:
+            start,end,p_max=gethgtinfo
         df=self.proc.get_dfc_hgt_day(start,end,p_max)
         self._insert_many(df,db_table['collnam'])
             
