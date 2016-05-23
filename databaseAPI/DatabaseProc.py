@@ -52,7 +52,12 @@ class DatabaseProc(object):
     
     #获取当日次新股列表
     def get_tickercxg(self,date):
-        pass
+        collnam='stockinfo'
+        year=365
+        sel_fields=['ticker','timeToMarket']
+        df=self.dbobj.db_find(sel_fields,collnam)
+        mask=[self.base.date_minus(date,str(x))<=year if len(x)==10 else False for x in df['timeToMarket']]
+        return df.ix[mask]
     
     #获取当日开始打新的冻结资金
     def get_amtdx(self):

@@ -18,6 +18,7 @@ from Base import Base
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
 from databaseAPI.DatabaseInterface import DatabaseInterface
+from databaseAPI.DatabaseProc import DatabaseProc
 
 date_format=settings.date_format
 
@@ -28,6 +29,7 @@ class StockDataProc(object):
         self.base=Base()
         self.wp=StockInterfaceWrap()
         self.stat=StockDataStat()
+        self.db_proc=DatabaseProc()
         
     #给起始和终止日期，返回期间的行
     #colnam是date类型所在的列
@@ -245,53 +247,53 @@ class StockDataProc(object):
 
     
     
-    #按照（通联）行业获取股票列表
-    #inds---行业中文名称，默认为全部行业
-    def get_stockbyidstry(self,inds='',lev=1):
-        #行业数据接口
-        itf=self.wp.itfEquInd_proc
-        #接口返回的分组数据，股票代码、行业名称
-        #这里只取到一级或二级
-        industryName='industryName'+str(lev)
-        field=['ticker',industryName]
-        #输入处理
-        #
-        if inds!='':
-            #将inds转为utf-8编码
-            #inds=self.base.zhs_decode(inds)
-            #设置选择的行业
-            res_row_sel={industryName:inds}
-        else:
-            #选择全部行业
-            res_row_sel={}
-        #获取行业分组
-        stock_grp=self._get_stockbygrp(itf,inds,field=field,res_row_sel=res_row_sel)
-        #将group格式转为dic格式
-        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
-        return stock_grp_dic
-    
-    #按照概念获取股票列表
-    def stock_bycon(self,cons=''):
-        #概念数据接口
-        itf=self.wp.itfConCla_proc
-        #接口返回的分组数据，股票代码、行业名称
-        field=['code','c_name']
-        #输入处理
-        #
-        if cons!='':
-            #将inds转为utf-8编码
-            cons=self.base.zhs_decode(cons)
-            #设置选择的行业
-            res_row_sel={field[1]:cons}
-        else:
-            #选择全部行业
-            res_row_sel={}
-        #获取行业分组
-        stock_grp=self._stock_bygrp(itf,cons,field=field,res_row_sel=res_row_sel)
-        #将group格式转为dic格式
-        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
-        return stock_grp_dic
-        
+#    #按照（通联）行业获取股票列表
+#    #inds---行业中文名称，默认为全部行业
+#    def get_stockbyidstry(self,inds='',lev=1):
+#        #行业数据接口
+#        itf=self.wp.itfEquInd_proc
+#        #接口返回的分组数据，股票代码、行业名称
+#        #这里只取到一级或二级
+#        industryName='industryName'+str(lev)
+#        field=['ticker',industryName]
+#        #输入处理
+#        #
+#        if inds!='':
+#            #将inds转为utf-8编码
+#            #inds=self.base.zhs_decode(inds)
+#            #设置选择的行业
+#            res_row_sel={industryName:inds}
+#        else:
+#            #选择全部行业
+#            res_row_sel={}
+#        #获取行业分组
+#        stock_grp=self._get_stockbygrp(itf,inds,field=field,res_row_sel=res_row_sel)
+#        #将group格式转为dic格式
+#        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
+#        return stock_grp_dic
+#    
+#    #按照概念获取股票列表
+#    def stock_bycon(self,cons=''):
+#        #概念数据接口
+#        itf=self.wp.itfConCla_proc
+#        #接口返回的分组数据，股票代码、行业名称
+#        field=['code','c_name']
+#        #输入处理
+#        #
+#        if cons!='':
+#            #将inds转为utf-8编码
+#            cons=self.base.zhs_decode(cons)
+#            #设置选择的行业
+#            res_row_sel={field[1]:cons}
+#        else:
+#            #选择全部行业
+#            res_row_sel={}
+#        #获取行业分组
+#        stock_grp=self._stock_bygrp(itf,cons,field=field,res_row_sel=res_row_sel)
+#        #将group格式转为dic格式
+#        stock_grp_dic=self.base.pdgrp_to_dic(stock_grp)
+#        return stock_grp_dic
+#        
     
     #给一段日期范围，返回股票交易日期列表
     #计算方法：提取大盘指数在给定日期范围内的交易日期
@@ -387,6 +389,13 @@ class StockDataProc(object):
         
         data_merged = data_merged.set_index(['date'])
         return data_merged
+
+    def get_daytrade_concept(self,connam,date,trade_field=['date','close','volume','amount']):
+        contickers=self.db_proc.get_tickerconcept(connam)
+        itf=self.wp.itfHDat_proc
+        itf_paras={'start':date,'end':date,'field': trade_field}
+        trade_data=self._get_byticker(tickers,itf,itf_paras)
+        res=stat.proc_df_addcumsum(res,calc_fields)
     
     #获取全部股票近几个月的交易数据
     def get_monthtrade_stock(self,months,tickers='',trade_field=['date','close']):
