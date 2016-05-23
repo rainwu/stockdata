@@ -172,13 +172,24 @@ class Base(object):
         #将str转为整数
         #s--str
         #如果输入不能转为int则返回False
-        def string_to_int(self,s):
-            try:
-                i=int(s)
-                return i
-            except ValueError:
-                print '无法将字符转为数值'
-                return False
+        def type_to_type(self,data,totype):
+            data=self.any_2list(data)
+            res=[]
+            for x in data:
+                try:
+                    res=res+[totype(x)]
+                except ValueError:
+                    print '无法转换类型'
+                    return False
+            return res
+        
+        def int_to_strdate(self,intdate):
+            intdate=self.any_2list(intdate)
+            res=[]
+            for x in intdate:
+                strdate=str(x)
+                res=res+[strdate[:4]+'-'+strdate[4:6]+'-'+ strdate[6:8]]
+            return res
         
         #将str list 或str转为datetime
         def str_to_datetime(self,s,dateformat=date_format):

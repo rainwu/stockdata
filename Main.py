@@ -82,9 +82,8 @@ res=stat.proc_df_addcumsum(res,calc_fields)
 res.to_csv('msci.csv',encoding='utf-8')
 
 #沪港通流入流出，from 东方财富
-res=ins.get_dfc_hgt_day(start,end)
-res.to_csv('hgt.csv',encoding='utf-8')
 
+#bulk优化
 
 #重要概念：沪港通、次新股、石油、煤炭、钢铁
 
@@ -103,7 +102,9 @@ res.to_csv('hgt.csv',encoding='utf-8')
 #石油
 #房价
 #钢铁期货
-#宏观经济
+#宏观经济,进出口数据
+
+#基金数据
 
 
 

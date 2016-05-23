@@ -153,24 +153,21 @@ class DatabaseInterface(object):
         
         return self._db_find_format(result,sel_fields)
     
-    def db_updateiter(self,filter_dicl,update_dicl,collnam,update_func=None):
+    def _db_updateiter_count(self,filter_dicl,update_dicl,
+                             collnam,update_func):
         #配置控制记录
         ctrl_filter_dic={'collnam': collnam}
         ctrl_update_dic={'step': 1}
         ctrl_updateover_dic={'step': 0}
         ctrl_findsel='step'
-        
-        if not update_func:
-            update_func=self.db_updateone
-    
-        #获取断点/
         ctrl_table_struct=tables.control_table_struct
+        
         step=self.db_findone(ctrl_filter_dic,ctrl_findsel,ctrl_table_struct['collnam'])
         print '断点开始于'+str(step)
         
         total_len=len(filter_dicl)-step
         process=0.0
-        #批量更新
+        
         for f,u in zip(filter_dicl[step:],update_dicl[step:]):
             print '更新数据.....'
             update_func(f,u,collnam)
@@ -180,6 +177,71 @@ class DatabaseInterface(object):
             print '已完成'+str(round(process*100/total_len,2))+'%.....'
         print '数据更新完毕，重置计数器.....'
         self.db_updateone(ctrl_filter_dic,ctrl_updateover_dic,ctrl_table_struct['collnam'])
+        
+        return 0
+    
+    
+    def db_updateiter(self,filter_dicl,update_dicl,collnam,update_func=None,count=True):
+        if not update_func:
+            update_func=self.db_updateone
+        
+        if count:
+            self._db_updateiter_count(filter_dicl,update_dicl,
+                             collnam,update_func)
+        else:
+            total_len=len(filter_dicl)
+            process=0.0
+            for f,u in zip(filter_dicl,update_dicl):
+                print '更新数据.....'
+                update_func(f,u,collnam)
+                process=process+1
+                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+            print '数据更新完毕'
+            
+        return 0
+        
+    def _db_insertiter_count(self,data,collnam):
+        #配置控制记录
+        ctrl_filter_dic={'collnam': collnam}
+        ctrl_update_dic={'step': 1}
+        ctrl_updateover_dic={'step': 0}
+        ctrl_findsel='step'
+        ctrl_table_struct=tables.control_table_struct
+        
+        step=self.db_findone(ctrl_filter_dic,ctrl_findsel,ctrl_table_struct['collnam'])
+        print '断点开始于'+str(step)
+        
+        total_len=len(data)-step
+        process=0.0
+        
+        for x in data:
+            print '更新数据.....'
+            self.db_insertone(x,collnam)
+            print '更新计数.....'
+            self.db_updateone(ctrl_filter_dic,ctrl_update_dic,ctrl_table_struct['collnam'],opr='$inc')
+            process=process+1
+            print '已完成'+str(round(process*100/total_len,2))+'%.....'
+        print '数据更新完毕，重置计数器.....'
+        self.db_updateone(ctrl_filter_dic,ctrl_updateover_dic,ctrl_table_struct['collnam'])
+        
+        return 0
+    
+    
+    def db_insertiter(self,data,collnam,count=True):    
+        if not self.base.is_iter(data) or type(data)==dict:
+            self.db_insertone(data,collnam)
+            
+        if count:
+            self._db_insertiter_count(data,collnam)
+        else:
+            total_len=len(data)
+            process=0.0
+            for x in data:
+                print '更新数据.....'
+                self.db_insertone(x,collnam)
+                process=process+1
+                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+            print '数据更新完毕'
             
         return 0
     
@@ -201,4 +263,13 @@ class DatabaseInterface(object):
         op_para={'key_or_list':indexnam,'unique':unique}
         result=self._db_connect(op,op_para)
         return result
-        
+
+
+class bulk(object):
+    
+    def __init__(self):
+        pass
+
+
+
+

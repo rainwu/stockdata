@@ -93,14 +93,18 @@ class DatabaseUpdate(object):
          #批量更新
         print '批量更新数据....'
         self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam,self.dbobj.db_insertarray_one)
-    
-    def _insert_many(self,df,collnam,index_id=0):
+        
+        
+    def _insert_many(self,df,collnam,index_id=0,useiter=False):
          if not df.index.name is None:
                 df.reset_index(level=index_id, inplace=True)
                 
          insert_data=self.base.pd_df2diclist(df)
          #插入数据
-         self.dbobj.db_insertmany(insert_data,collnam)
+         if useiter:
+             self.dbobj.db_insertiter(insert_data,collnam)
+         else:
+             self.dbobj.db_insertmany(insert_data,collnam)
          self.dbobj.db_ensure_index(collnam,df.columns[index_id],unique=True)
 
     
@@ -217,7 +221,7 @@ class DatabaseUpdate(object):
         
         res_row_sel={crawl_field[0]:tickers}
         
-        print updatecollnam+':StoBas part 开始初次插入数据.....'
+
         #------数据抓取------
         print '原始数据抓取....'
         crawl_data=self.wp.itfStoBas_proc(field=crawl_field,res_row_sel=res_row_sel)
@@ -225,6 +229,9 @@ class DatabaseUpdate(object):
         #------抓取数据处理------
         #转为数据库的项名
         crawl_data.columns=crawl_field_2db
+        
+        #特殊处理，将日期由int格式转为标准str格式
+        crawl_data['timeToMarket']=self.base.int_to_strdate(crawl_data['timeToMarket'])
 
         self._update_updateiter(db_table,crawl_data)
     
@@ -296,11 +303,13 @@ class DatabaseUpdate(object):
         else:
             start,end,p_max=gethgtinfo
         df=self.proc.get_dfc_hgt_day(start,end,p_max)
+        
         self._insert_many(df,db_table['collnam'])
             
                           
     def update_newtickers(self):
         new_tickers=self.get_newtickers()
+        print new_tickers
         if new_tickers:
             print '插入新股票，初始化....'
             self.insert_stockinfo_init(new_tickers)
@@ -313,12 +322,13 @@ class DatabaseUpdate(object):
             return -1
             
     def update_daily(self):
+        self.update_newtickers()
         self.update_stockinfo_numerics()
-        
+        self.insert_stockhgt()
     
 #['300512', '603737', '601611', '300516', '300513']
     
-    
+#ex._insert_many(df.ix[:3],'test',useiter=True)
 
         
 
