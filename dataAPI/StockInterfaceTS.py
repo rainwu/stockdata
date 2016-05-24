@@ -240,7 +240,7 @@ class StockInterfaceTS(object):
         if len(start)==0:
             start=self.ba.today_as_str()
         if len(end)==0:
-            end=self.ba.str_as_datetime(start,gap=1)
+            end=self.ba.strdate_calc(start,gap=1)
         #定义接口，定义接口参数
         itf=ts.get_hist_data
         itf_paras={'code':code,'start':start,'end':end,'ktype':ktype}

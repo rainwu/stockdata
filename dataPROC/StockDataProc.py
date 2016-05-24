@@ -14,6 +14,8 @@ except KeyError:
     pass
 import settings
 import pandas as pd
+import sys
+import itertools
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
@@ -45,6 +47,39 @@ class StockDataProc(object):
         
         return df.ix[mask] 
     
+    def _get_data(self,itfs,itfparas,mergebys,index=''):
+        
+        def get_data(itf,itfpara,mergeby,index):
+            data=itf(index,**itfpara) if index else itf(**itfpara)
+            if not data.index.name==mergeby:
+                data.set_index(mergeby,inplace=True)
+            return data
+            
+        def get_datas(itfs,itfparas,mergebys,index):
+            for itf,itfpara,mergeby in itertools.izip(itfs,itfparas,mergebys):
+                yield get_data(itf,itfpara,mergeby,index)
+        
+        if not self.base.is_iter(itfs):
+            return get_data(itfs,itfparas,mergebys,index)
+        
+        if len(itfs)!=len(itfparas):
+            print '函数列表和其参数列表长度不等!'
+            sys.exit()
+        
+        mergebys=self.base.any_2list(mergebys)*len(itfs) if not self.base.is_iter(mergebys) else mergebys
+        
+        return pd.concat(get_datas(itfs,itfparas,mergebys,index),axis=1)
+    
+    def _get_data_iter(self,keys,itfs,itfparas,mergebys):
+        for k in self.base.any_2list(keys):
+            yield self._get_data(itfs,itfparas,mergebys,k)
+        
+    #test  itfHisDatD_proc(self,code,start='',end='',field   
+        #itfHDat_proc(self,code,start='',end='',field
+#    itfs=[ex.wp.itfHisDatD_proc,ex.wp.itfHDat_proc]
+#    itfparas=[{'code':'000001','start':'2016-05-18','field':['date','p_change']},{'code':'000001','start':'2016-05-18','field':['date','volume','amount']}]
+#    mergebys='date'
+#    _get_dataandmerge(itfs,itfparas,mergebys)
     #获取所有深市股票代码
     def get_tickersz(self,tickerall):
         return [tk for tk in tickerall if tk.startswith('0') or tk.startswith('3')]
@@ -204,6 +239,23 @@ class StockDataProc(object):
         return data_sel
 
 
+
+    def get_daytrade_concept(self,connam,date):
+        trade_field=[['volume','amount'],['p_change']]
+        itfs=[self.wp.itfHDat_proc,self.wp.itfHisDatD_proc]
+        
+        itfparas=[{'start':date,'end':date,'field': trade_field[0]},
+                  {'start':date,'end':date,'field': trade_field[1]}]
+        
+        mergebys='date'
+        
+        contickers=self.db_proc.get_tickerconcept(connam)
+        
+        trade_data=self._get_data_iter(contickers,itfs,itfparas,mergebys)
+        
+        trade_df=pd.concat(trade_data)
+        trade_df.index=contickers
+        return trade_df
     #==========================================================#
     
         
@@ -222,17 +274,7 @@ class StockDataProc(object):
         df_group=ind_df[field[0]].groupby(ind_df[field[1]])
         return df_group
     
-    #【实现函数】按照给定的股票编码，逐个获取函数数据
-    #如果股票在其中某日没有数据，则当日返回null
-    #如果股票在区间内全部没有数据，则返回空的df，df列名为select_field
-    #返回生成器of df
-    def _get_byticker(self,tickers,itf,**itf_paras):
-        if type(tickers)==str:
-            tickers=[tickers]     
-        for t in tickers:
-            print u'获取数据:'+t+'.....'
-            clopri_df=itf(t,**itf_paras)
-            yield clopri_df
+
             
     #【实现函数】按照股票代码，逐个获取函数数据
     #适用于每个股票数据只有一行：合并行后返回df
@@ -390,12 +432,7 @@ class StockDataProc(object):
         data_merged = data_merged.set_index(['date'])
         return data_merged
 
-    def get_daytrade_concept(self,connam,date,trade_field=['date','close','volume','amount']):
-        contickers=self.db_proc.get_tickerconcept(connam)
-        itf=self.wp.itfHDat_proc
-        itf_paras={'start':date,'end':date,'field': trade_field}
-        trade_data=self._get_byticker(tickers,itf,itf_paras)
-        res=stat.proc_df_addcumsum(res,calc_fields)
+
     
     #获取全部股票近几个月的交易数据
     def get_monthtrade_stock(self,months,tickers='',trade_field=['date','close']):

@@ -97,8 +97,9 @@ class Base(object):
         def date_inc(self,date):
             return self.today_as_str(base_date=date,gap_val=1)
             
-        def date_sort(self):
+        def date_sort(self,dates,dateformat=date_format):
             pass
+            
         
             #将一个字典列表中，所有指定key的值导出
             #为防万一，使用如果key不存在于某个字段会报错
@@ -190,6 +191,10 @@ class Base(object):
                 strdate=str(x)
                 res=res+[strdate[:4]+'-'+strdate[4:6]+'-'+ strdate[6:8]]
             return res
+        
+        def strdate_calc(self,strdate,gap=1):
+            date=self.str_to_datetime(strdate)
+            return self.datetime_to_str(date+datetime.timedelta(days=gap))
         
         #将str list 或str转为datetime
         def str_to_datetime(self,s,dateformat=date_format):

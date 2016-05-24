@@ -17,6 +17,7 @@ from dataAPI.StockInterfaceYH import StockInterfaceYH
 from dataAPI.StockInterfaceWB import StockInterfaceWB
 import settings
 #此文件接收接口数据进行自定义二次加工处理，主要是行和列的抽取
+date_format=settings.date_format
 
 
 class StockInterfaceWrap(object):
@@ -103,7 +104,7 @@ class StockInterfaceWrap(object):
     #返回
     #处理后的dataframe，或None
     def _itfdata_proc(self,api_itf,api_itf_paras={},res_col_sel=[],res_row_sel={},
-                      row_between_ops=[],date_proc=False):
+                      row_between_ops=[]):
         
         #获取接口数据，dataframe
         print 'get data....'
@@ -117,40 +118,39 @@ class StockInterfaceWrap(object):
             return data
         
         #将数据的row index提取出为列
-        if not data.index is None:
-            #为index添加名称，默认为‘rownum’
-            if not data.index.name is None:
-                data.reset_index(inplace=True)
+
+        if not data.index.name is None:
+            data.reset_index(inplace=True)
         
         
         #抽选行
         print 'data row extract....'
         data=self._df_rowselect(data,res_row_sel,row_between_ops)
-        
-        
-        
-        
-        
-        
-        
+ 
         #抽选列
-        if len(res_col_sel)>0:
-            if date_proc:
-                col=map(str.lower, data.columns)
-                sel=list(set(['date']+map(str.lower, res_col_sel)))
-                col_sel=[col.index(s) for s in sel]
-                data=data[col_sel].iloc[::-1]
-            else:
-                print data.columns
-                print res_col_sel
-                data=data[res_col_sel]
+        data=data[res_col_sel] if len(res_col_sel)>0 else data
+        
         #去除重复
         data=data.drop_duplicates()
         return data
             
         
-    
-    
+    def _itfdata_proc_trade(self,api_itf,api_itf_paras={},res_col_sel=[],res_row_sel={},
+                      row_between_ops=[],setindex='date'):
+        #交易类数据框必须有date项
+        res_col_sel=list(set([setindex]+res_col_sel)) if len(res_col_sel)>0 else res_col_sel
+        
+        res=self._itfdata_proc(api_itf,api_itf_paras,res_col_sel,res_row_sel,
+                      row_between_ops)
+                      
+        if res is None:
+            res=pd.DataFrame(index=[setindex],columns=res_col_sel)
+        else:
+            res[setindex] =pd.to_datetime(res[setindex],format=date_format)
+            res=res.sort(setindex)
+            res.set_index(setindex,inplace=True)
+
+        return res
         
     
 #=================基本信息===========================
@@ -268,21 +268,20 @@ class StockInterfaceWrap(object):
                      res_row_sel={},row_between_ops=[]):
         api_itf=self.api.getHDat
         api_itf_paras={'code':code,'start':start,'end':end}
-        res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
+        
+        res=self._itfdata_proc_trade(api_itf,api_itf_paras,field,res_row_sel,
                       row_between_ops)     
-        if res.shape[0]==0:
-            print code+u':无数据！'            
-            res.loc[0]=[None]*res.shape[1]
+            
         return res
     
     #指数复权日线数据
     #返回
     #dataframe
     def itfHDatInd_proc(self,code,start='',end='',field=[],
-                     res_row_sel={},row_between_ops=[]):
+                     res_row_sel={},row_between_ops=[],setindex='date'):
         api_itf=self.api.getHDat
         api_itf_paras={'code':code,'start':start,'end':end,'index':True}
-        res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
+        res=self._itfdata_proc_trade(api_itf,api_itf_paras,field,res_row_sel,
                       row_between_ops)     
         return res
 
@@ -290,13 +289,12 @@ class StockInterfaceWrap(object):
     #股市交易数据不复权
     def itfHisDatD_proc(self,code,start='',end='',field=[],
                      res_row_sel={},row_between_ops=[]):
+        if len(end)==0:
+            end=self.ba.today_as_str()
         api_itf=self.api.getHisDat
         api_itf_paras={'code':code,'start':start,'end':end,'ktype':'D'}
-        res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
+        res=self._itfdata_proc_trade(api_itf,api_itf_paras,field,res_row_sel,
                       row_between_ops)    
-        if res.shape[0]==0:
-                print code+u':无数据！'
-                res.loc[0]=[None]*res.shape[1]
         return res
 
 
@@ -307,9 +305,6 @@ class StockInterfaceWrap(object):
         api_itf_paras={'code':code,'start':start,'end':end,'ktype':ktype}
         res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
                       row_between_ops)    
-        if res.shape[0]==0:
-                print code+u':无数据！'
-                res.loc[0]=[None]*res.shape[1]
         return res
     
     #股市日成交逐笔
