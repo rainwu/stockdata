@@ -323,7 +323,9 @@ class DatabaseUpdate(object):
             
     def update_daily(self):
         self.update_newtickers()
+        print '更新全部股票数值信息...'
         self.update_stockinfo_numerics()
+        print '更新沪港通余额信息...'
         self.insert_stockhgt()
     
 #['300512', '603737', '601611', '300516', '300513']

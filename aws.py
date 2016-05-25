@@ -14,4 +14,4 @@ import databaseAPI.db_tables as tables
 
 #执行语句
 up=DatabaseUpdate()
-up.update_stockinfo_numerics()
+up.update_daily()

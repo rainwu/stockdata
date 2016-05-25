@@ -15,6 +15,7 @@ except KeyError:
 import settings
 import pandas as pd
 import sys
+import numpy as np
 import itertools
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
@@ -97,6 +98,17 @@ class StockDataProc(object):
     def get_tickersh(self,tickerall):
         return [tk for tk in tickerall if tk.startswith('6')]
     
+    def is_tickersh(self,tickers):
+        return [tk.startswith('6') for tk in tickers]
+    
+    def is_tickersz(self,tickers):
+        return [tk.startswith('0') for tk in tickers]
+    
+    def is_tickercyb(self,tickers):
+        return [tk.startswith('3') for tk in tickers]
+    
+    
+    
     #获取所有股票代码，可以选择略过停牌的股票
     #tp---True返回包括停牌股票，False不反悔停牌股票
     def get_tickerall(self,tp=True):
@@ -159,11 +171,8 @@ class StockDataProc(object):
     
     #获取某个股指的交易日线
     #所有trade类必须有date项
-    def get_index_trade_day(self,code,start,end='',field=['date','close','volume'],pct=True,
+    def get_index_trade_day(self,code,start,end='',field=['date','volume'],pct=True,
                             pct_fields=[]):
-        datenam='date'
-        if field:
-            field=self.base.lists_add(field,datenam)
         
         data=self.wp.itfHDatInd_proc(code,start,end,field)
         
@@ -174,6 +183,9 @@ class StockDataProc(object):
                 pct_fields=data_rev.columns
             data_rev.loc[:,pct_fields]=data_rev[pct_fields].pct_change(1)*100
         return data_rev
+    
+    def get_tradedate_indexs(self,code,date,field=['p_change']):
+        return self.wp.itfHisDatD_proc(code,date,date,field)
     
     #获取沪深融资融券汇总交易数据
     #所有trade类必须有opDate项
@@ -240,7 +252,7 @@ class StockDataProc(object):
 
 
 
-    def get_daytrade_concept(self,connam,date):
+    def get_datetrade_concept(self,connam,date):
         trade_field=[['volume','amount'],['p_change']]
         itfs=[self.wp.itfHDat_proc,self.wp.itfHisDatD_proc]
         
@@ -255,7 +267,18 @@ class StockDataProc(object):
         
         trade_df=pd.concat(trade_data)
         trade_df.index=contickers
+        
+        trade_df['p_change_idx']=self.get_datetrade_ticksec(contickers,date)       
+        
         return trade_df
+    
+    def get_datetrade_ticksec(self,tickers,date):
+        codes=['000001','399001','399006']
+        index_data=[self.get_tradedate_indexs(x,date).squeeze() for x in codes]
+        index_func=[self.is_tickersh,self.is_tickersz,self.is_tickercyb]
+        return sum(map(lambda x,y:
+                np.array(x(tickers))*y,index_func,index_data))
+        
     #==========================================================#
     
         

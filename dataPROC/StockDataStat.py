@@ -10,6 +10,7 @@ try:
 except KeyError:
     pass
 import settings
+import numpy as np
 from Base import Base 
 #from dataPROC.StockDataProc import StockDataProc
 
@@ -35,6 +36,34 @@ class StockDataStat(object):
         new_colid='cum'
         calc_op=self.calc_cumsum
         return self._df_calcadd(df,colnams,new_colid,calc_op)
+    
+    def _calc_outliers_std(self,data,n=3,ismask=False):
+        m,s=(np.mean(data),np.std(data))
+        down,up=(m-n*s,m+n*s)
+        if ismask:
+            return np.logical_or(data<=down, data>=up)
+        else:
+            return data[np.logical_or(data<=down, data>=up)]
+    
+    def _calc_outliers_q(self,data,n=1.5,ismask=False):
+        q31=np.percentile(data,[75])-np.percentile(data,[25])
+        m=np.median(data)
+        down,up=(m-n*q31,m+n*q31)
+        if ismask:
+            return np.logical_or(data<=down, data>=up)
+        else:
+            return data[np.logical_or(data<=down, data>=up)]
+        
+    
+    def calc_outliers(self,data,isnorm=True,ismask=False):
+        data=np.array(data)
+        data = data[~np.isnan(data)]
+        
+        if isnorm:
+            return self._calc_outliers_std(data,ismask=ismask)
+        else:
+            return self._calc_outliers_q(data,ismask=ismask)
+        
         
         
     #按行或列计算df每列/行的变化率
@@ -68,10 +97,42 @@ class StockDataStat(object):
             else:
                 ranks=ranks+None
         return ranks
+    
+    
+    def contrade_stat(self,df):
+        size=df.shape[0]
+        vol_total=df['volume'].sum()
+        amt_total=df['amount'].sum()
+        pchan_median=df['p_change'].median()
+        pchan_mean=df['p_change'].mean()
+        pchan_mad=df['p_change'].mad()
+        
+        #outlier分析
+        #行业内outlier，和行业median比较
+        outlier_mask=self.calc_outliers(df['p_change'],isnorm=False,ismask=True)
+        if sum(outlier_mask)>0:
+            pchan_outl=df.dropna().ix[outlier_mask]
+            outliers=pchan_outl['p_change']
+            #--outlier对于行业内差异的影响度：
+            #------股票偏离median的值 除以 行业内所有股票偏离median的总和，再将所有outlier的占比相加
+            outlier_efft=np.sum(np.abs(outliers-np.median(df['p_change'])))*100/np.sum(np.abs(df['p_change']-np.median(df['p_change'])))
+            avg_efft=100*(len(outliers))/(size-1)
+        
+        #总体outlier，和对应的股指比较
+        df['p_change_fix']=df['p_change']-df['p_change_idx']
+        pchan_fix_median=df['p_change_fix'].median()
+        pchan_fix_mean=df['p_change_fix'].mean()
+        pchan_fix_mad=df['p_change_fix'].mad()
+        
+        outlier_mask=self.calc_outliers(df['p_change_fix'],isnorm=False,ismask=True)
+        if sum(outlier_mask)>0:
+            pchan_fix_outl=df.dropna().ix[outlier_mask]
+            outliers_fix=pchan_fix_outl['p_change_fix']
+            outlier_fix_efft=np.sum(np.abs(outliers_fix-np.median(df['p_change_fix'])))*100/np.sum(np.abs(df['p_change_fix']-np.median(df['p_change_fix'])))
+            avg_efft_fix=100*(len(outliers_fix))/(size-1)
         
         
-        
-        
-        
+
+    #
         
         
