@@ -17,3 +17,4 @@ db_user='admin'
 db_psw='admin'
 db_nam='stkdb'
 db_set[db_nam]=db_url % (db_user,db_psw,db_nam)
+db_set['default']=db_url % (db_user,db_psw,'')

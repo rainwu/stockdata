@@ -12,6 +12,9 @@ from dataPROC.StockDataStat import StockDataStat
 from databaseAPI.DatabaseUpdate import DatabaseUpdate
 import databaseAPI.db_tables as tables
 
+
+
+
 #执行语句
 up=DatabaseUpdate()
 up.update_daily()
