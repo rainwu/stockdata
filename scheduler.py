@@ -24,7 +24,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 logging.basicConfig()
 
 def my_job():
-    data={'name':321}
+    data={'name':'xxxx'}
     dbobj=DatabaseInterface()
     dbobj.db_insertone(data,'test')
 
@@ -60,6 +60,6 @@ job_defaults = {
 }
 scheduler = BackgroundScheduler(jobstores=jobstores,executors=executors,
                                 job_defaults=job_defaults, timezone=tzone)
-scheduler.add_job(test, run_date=datetime.datetime(2016,5,26,16,40, 5),timezone=tzone)
+scheduler.add_job(my_job, run_date=datetime.datetime(2016,5,27,16,54, 5),timezone=tzone,misfire_grace_time=180)
 print scheduler.get_jobs()
 scheduler.start()
