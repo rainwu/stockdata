@@ -6,6 +6,7 @@ Created on Thu Nov 12 15:39:04 2015
 """
 import os
 import tushare as ts
+import pytz
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -19,5 +20,6 @@ ts.set_token(token)
 
 try_times=5
 sleep_time=5
+timezone=pytz.timezone('Asia/Shanghai')
 
 date_format="%Y-%m-%d"

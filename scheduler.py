@@ -15,6 +15,7 @@ from databaseAPI.DatabaseInterface import DatabaseInterface
 from Base import Base 
 import pymongo
 import datetime
+
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -29,7 +30,7 @@ dbnam=settings.db_nam
 colnam='schedulelog'
 client = pymongo.MongoClient(host=settings.db_set['stkdb'])
             #scheduler设定
-tzone= pytz.timezone('Asia/Shanghai')
+tzone= settings.timezone
             #任务记录存入mongo数据库
 jobstores = {
                 'default': MongoDBJobStore(collection=colnam, database=dbnam, client=client)
@@ -60,7 +61,7 @@ class Scheduler(object):
         
         def add_runattime(self,time,scheduler,job_func,job_paras={},timeformat='%Y-%m-%d %H:%M:%S',
                           misfire_grace_time=300):
-            time=self.base.str_to_datetime(time,dateformat=timeformat)
+            #time=self.base.str_to_datetime(time,dateformat=timeformat)
             scheduler.add_job(job_func,run_date=time,misfire_grace_time=misfire_grace_time,
                               kwargs=job_paras)
             return scheduler

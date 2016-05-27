@@ -372,11 +372,9 @@ class StockDataProc(object):
         if end=='':
             end=self.base.today_as_str()
         work_dates=self.wp.itfHDatInd_proc('399106',start=start,end=end,field=field)
-        if not work_dates is None:
-            try:
-                return sorted(work_dates.squeeze(),reverse=False)
-            except TypeError:
-                return work_dates
+        work_dates_list=work_dates.index
+        if not work_dates_list.name is None:
+            return sorted(work_dates_list,reverse=False)
         else:
             return None
         
@@ -384,7 +382,7 @@ class StockDataProc(object):
         gap=7
         if date=='':
             date=self.base.today_as_str()
-        end=self.base.today_as_str(base_date=date,gap_val=-1)
+        end=self.base.today_as_str(base_date=date,gap_val=1)
         start=self.base.today_as_str(base_date=date,gap_val=-gap)
         workdays=self.get_workdays(start,end)
         if not workdays is None:
