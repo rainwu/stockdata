@@ -6,6 +6,8 @@ Created on Tue Apr 19 15:37:57 2016
 """
 #index默认在最前面
 
+
+
 #control
 control_table_struct={
     'collnam':'control',
