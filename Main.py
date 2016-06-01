@@ -97,6 +97,8 @@ res.to_csv('msci.csv',encoding='utf-8')
 
 #人民币对一揽子指数
 
+#rqf2，南方a50
+
 #日本、美国、欧洲股指，MSCI等
 #黄金白银
 #石油
