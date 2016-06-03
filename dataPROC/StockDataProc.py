@@ -271,6 +271,26 @@ class StockDataProc(object):
         trade_df['p_change_idx']=self.get_datetrade_ticksec(contickers,date)       
         
         return trade_df
+
+    def get_datetrade(self,date):
+        trade_field=[['volume','amount'],['p_change']]
+        itfs=[self.wp.itfHDat_proc,self.wp.itfHisDatD_proc]
+        
+        itfparas=[{'start':date,'end':date,'field': trade_field[0]},
+                  {'start':date,'end':date,'field': trade_field[1]}]
+        
+        mergebys='date'
+        
+        tickers=self.db_proc.get_tickerall()
+        
+        trade_data=self._get_data_iter(tickers,itfs,itfparas,mergebys)
+        
+        trade_df=pd.concat(trade_data)
+        trade_df.index=tickers
+            
+        return trade_df
+
+
     
     def get_datetrade_ticksec(self,tickers,date):
         codes=['000001','399001','399006']

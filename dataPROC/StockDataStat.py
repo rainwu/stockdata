@@ -101,8 +101,8 @@ class StockDataStat(object):
     
     def contrade_stat(self,df):
         size=df.shape[0]
-        vol_total=df['volume'].sum()
-        amt_total=df['amount'].sum()
+        vol_total=df['volume'].mean()
+        amt_total=df['amount'].mean()
         pchan_median=df['p_change'].median()
         pchan_mean=df['p_change'].mean()
         pchan_mad=df['p_change'].mad()

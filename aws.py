@@ -45,23 +45,10 @@ from dateutil.tz import *
 
 
 #多线程测试
-
-def takeANap():
-       time.sleep(30)
-       up=DatabaseInterface()
-       up.db_insertone({'name':'1605311'},'test')
-       
-def tz_tolocal(time,tz,timeformat='%Y-%m-%d %H:%M:%S'):
-    if type(time)==str:
-        time=datetime.datetime.strptime(time,timeformat)
-    tz_time=tz.localize(time)
-    return tz_time.astimezone(tzlocal())
-    
-
-
-threadObj = threading.Thread(target=takeANap)
-threadObj.daemon = True
-threadObj.Timer(delay, takeANap).start()
+date='2016-06-02'
+prc=StockDataProc()
+res=prc.get_datetrade(date)
+res.to_csv('20160602trade.csv',encoding='utf-8')
 
 
 
