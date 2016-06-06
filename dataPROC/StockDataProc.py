@@ -289,15 +289,15 @@ class StockDataProc(object):
         trade_df.index=tickers
             
         return trade_df
-
-
     
+ 
     def get_datetrade_ticksec(self,tickers,date):
         codes=['000001','399001','399006']
         index_data=[self.get_tradedate_indexs(x,date).squeeze() for x in codes]
         index_func=[self.is_tickersh,self.is_tickersz,self.is_tickercyb]
         return sum(map(lambda x,y:
                 np.array(x(tickers))*y,index_func,index_data))
+    
         
     #==========================================================#
     

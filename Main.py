@@ -44,6 +44,7 @@ instance.update_stockgrps_inds2(db_table,crawl_field,crawl_field_2db,grpnam)
 start='2014-08-01'
 end='2016-05-01'
 ins=StockDataProc()
+wp=StockInterfaceWrap()
 stat=StockDataStat()
 #三大a股指数交易数据
 calc_fields=['close']
@@ -97,7 +98,11 @@ res.to_csv('msci.csv',encoding='utf-8')
 
 #人民币对一揽子指数
 
-#rqf2，南方a50
+#南方a50
+ticker='2823.HK'
+res=wp.itfYHtradat_proc(ticker,start,end)
+#其他rqf2
+#熊猫债
 
 #日本、美国、欧洲股指，MSCI等
 #黄金白银

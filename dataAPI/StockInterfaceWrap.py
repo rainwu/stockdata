@@ -406,9 +406,8 @@ class StockInterfaceWrap(object):
                      res_row_sel={},row_between_ops=[]):
         api_itf=self.apiyh.get_tradedata
         api_itf_paras={'ticker':ticker,'start':start,'end':end}
-        res=self._itfdata_proc(api_itf,api_itf_paras,field,res_row_sel,
-                      row_between_ops)
-#        res.columns=self.ba.to_lower(res.columns)
+        res=self.res=self._itfdata_proc_trade(api_itf,api_itf_paras,field,res_row_sel,
+                      row_between_ops,setindex='Date')  
         return res
 
     #沪股通每日余额，流入流出
