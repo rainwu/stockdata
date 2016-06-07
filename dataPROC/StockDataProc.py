@@ -17,6 +17,7 @@ import pandas as pd
 import sys
 import numpy as np
 import itertools
+import multiprocessing as mp
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
@@ -71,10 +72,83 @@ class StockDataProc(object):
         
         return pd.concat(get_datas(itfs,itfparas,mergebys,index),axis=1)
     
-    def _get_data_iter(self,keys,itfs,itfparas,mergebys):
-        for k in self.base.any_2list(keys):
-            yield self._get_data(itfs,itfparas,mergebys,k)
+    
+    def _get_data_mulprocess(self,getdata_itfs,getdata_itfparas,
+                             getdata_mergebys,iterkeys,
+                             handledata_index=0,max_process=mp.cpu_count()):
         
+        def _iter_func(keys,itfs,itfparas,mergebys):
+            for k in keys:
+                yield self._get_data(itfs,itfparas,mergebys,k)
+            
+        def _divide_task(iterkeys,max_process):
+            
+            real_process=min(len(iterkeys),max_process)
+            
+            len_eachtask=len(iterkeys)/real_process
+            len_bonustask=len(iterkeys)%real_process
+
+            tasklist=[iterkeys[len_eachtask*i:len_eachtask*(i+1)] for i in range(real_process)]
+            if len_bonustask>0:
+                map(lambda x,i:tasklist[i].append(x),iterkeys[-len_bonustask:],
+                         range(len_bonustask))
+            return tasklist
+        
+#        assert _divide_task([1,2],4)==[[1],[2]]
+#        assert _divide_task([1,2,3,4],4)==[[1],[2],[3],[4]]
+#        assert _divide_task([1,2,3,4,5,6],4)==[[1,5],[2,6],[3],[4]]
+        
+            
+        
+        def iter_as_list(process_keys,itfs,itfparas,mergebys):
+            gen_func=_iter_func(process_keys,itfs,itfparas,mergebys)
+            return list(gen_func)
+            
+        def iter_as_df(process_keys,itfs,itfparas,mergebys):
+            gen_func=_iter_func(process_keys,itfs,itfparas,mergebys)
+            return pd.concat(gen_func)
+            
+        def iter_write(process_keys,itfs,itfparas,mergebys):
+            pass
+        
+        
+        def process_func(process_task,handledata_itf,result,*args):
+            name = mp.current_process().name
+            print name, 'Starting'
+            result.append(handledata_itf(process_task,*args))
+        
+        handledata_itfs=[iter_as_df,iter_as_list,iter_write]
+        handledata_itf=handledata_itfs[handledata_index]
+        manager = mp.Manager()
+        
+        tasklists=_divide_task(iterkeys,max_process)
+        
+        completed_task_pool=manager.list([])
+        jobs=[]
+        for process_task in tasklists:  
+            p=mp.Process(name=process_task[0],target=process_func,args=(process_task,
+                         handledata_itf,completed_task_pool,
+                         getdata_itfs,getdata_itfparas,
+                         getdata_mergebys))
+            jobs.append(p)
+            p.start()
+    
+        for proc in jobs:
+            proc.join()
+        
+#        pool = mp.Pool()
+#        completed_task_pool=[]
+#        for process_task in tasklists:  
+#            process = pool.apply_async(process_func,
+#                                       (process_task,handledata_itf,
+#                                        getdata_itfs,getdata_itfparas,
+#                                        getdata_mergebys))
+#            completed_task_pool.append(process.get(timeout=100))
+    
+         
+        return completed_task_pool
+
+
     #test  itfHisDatD_proc(self,code,start='',end='',field   
         #itfHDat_proc(self,code,start='',end='',field
 #    itfs=[ex.wp.itfHisDatD_proc,ex.wp.itfHDat_proc]
@@ -283,7 +357,9 @@ class StockDataProc(object):
         
         tickers=self.db_proc.get_tickerall()
         
-        trade_data=self._get_data_iter(tickers,itfs,itfparas,mergebys)
+        #trade_data=self._get_data_iter(tickers,itfs,itfparas,mergebys)
+        trade_data=self._get_data_mulprocess(itfs,itfparas,
+                             mergebys,tickers)
         
         trade_df=pd.concat(trade_data)
         trade_df.index=tickers
