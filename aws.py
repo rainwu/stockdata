@@ -5,17 +5,13 @@ Created on Mon May 23 15:27:59 2016
 @author: warriorzhai
 """
 
-import os
-try:
-    os.chdir(os.environ["WORK_PATH"])
-except KeyError:
-    pass
+
 from databaseAPI.DatabaseInit import DatabaseInit
 from dataPROC.StockDataProc import StockDataProc
 from dataPROC.StockDataStat import StockDataStat
 from databaseAPI.DatabaseUpdate import DatabaseUpdate
 from databaseAPI.DatabaseInterface import DatabaseInterface
-from scheduler import Scheduler
+#from scheduler import Scheduler
 import databaseAPI.db_tables as tables
 import settings
 import datetime

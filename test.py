@@ -92,7 +92,9 @@ def iter_as_list(process_keys,itfs,itfparas,mergebys):
             
 def iter_as_df(process_keys,itfs,itfparas,mergebys):
     gen_func=_iter_func(process_keys,itfs,itfparas,mergebys)
-    return pd.concat(gen_func)
+    data=pd.concat(gen_func)
+    data.index=process_keys
+    return data
             
 def iter_write(process_keys,itfs,itfparas,mergebys):
     pass
@@ -117,8 +119,8 @@ if __name__ == '__main__':
 #    jobs.append(p2)
 #    p1.start()
 #    p2.start()
-    date='2016-06-03'
-    iterkeys=['000001','000002','601888','002707','600585']
+    date='2016-06-02'
+    iterkeys=prc.db_proc.get_tickerall()
     trade_field=[['volume','amount'],['p_change']]
     getdata_itfs=[prc.wp.itfHDat_proc,prc.wp.itfHisDatD_proc]
     getdata_itfparas=[{'start':date,'end':date,'field': trade_field[0]},
@@ -149,7 +151,9 @@ if __name__ == '__main__':
     for proc in jobs:
         proc.join()
     
-    print completed_task_pool
+    trade_df=pd.concat(completed_task_pool)
+    trade_df.to_csv('testdata.csv',encoding='utf-8')
+    
     
 
         

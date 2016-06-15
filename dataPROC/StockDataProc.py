@@ -660,12 +660,56 @@ class StockDataProc(object):
         data_merged=self.base.merge_format(work_days,trade_data,merge_on='date',df_names=tickers)
         return data_merged
     
+import multiprocessing
+class GetDataProcess(multiprocessing.Process):    
+    def __init__(self, task_queue, result_queue):
+        multiprocessing.Process.__init__(self)
+        self.task_queue = task_queue
+        self.result_queue = result_queue
+        
+    def run(self,func,*args,**kwargs):
+        proc_name = self.name
+        while True:
+            next_index_para = self.task_queue.get()
+            if next_index_para is None:
+                # Poison pill means shutdown
+                print '%s: Exiting' % proc_name
+                break
+            print '%s: %s' % (proc_name, next_index_para)
+            self.result_queue.put(func(next_index_para,*args,**kwargs))
+        return 
 
+def f(t):
+    print t
+      
+def test():
+    tickers=['000001','000002','601888','002707','600585','300009','603789','600519',
+             '002027','600028']
+    tasks = multiprocessing.Queue()
+    results = multiprocessing.Queue()
+    
+    num_process = multiprocessing.cpu_count() *2
+    print 'Creating %d consumers' % num_process
+    processes = [ GetDataProcess(tasks, results)
+                      for i in xrange(num_process) ]
+    for w in processes:
+        w.start()
         
-        
-        
-        
-        
-        
+    for i in tickers:
+        tasks.put(i)    
+            
+    for w in processes:
+        w.join()
+
+import time
+class Task(object):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+    def __call__(self):
+        time.sleep(0.1) # pretend to take some time to do the work
+        return '%s * %s = %s' % (self.a, self.b, self.a * self.b)
+    def __str__(self):
+        return '%s * %s' % (self.a, self.b)
         
     

@@ -99,6 +99,8 @@ res.to_csv('msci.csv',encoding='utf-8')
 #人民币对一揽子指数
 
 #南方a50
+start='2016-05-13'
+end=''
 ticker='2823.HK'
 res=wp.itfYHtradat_proc(ticker,start,end)
 #其他rqf2
