@@ -21,5 +21,6 @@ ts.set_token(token)
 try_times=5
 sleep_time=5
 timezone=pytz.timezone('Asia/Shanghai')
-
+process_num=3
+thread_num=2
 date_format="%Y-%m-%d"

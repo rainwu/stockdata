@@ -23,8 +23,11 @@ from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
 from databaseAPI.DatabaseInterface import DatabaseInterface
 from databaseAPI.DatabaseProc import DatabaseProc
+from dataPROC.MultiProcessTask import MultiProcessTask,MultiThreadTask
 
 date_format=settings.date_format
+process_num=settings.process_num
+thread_num=settings.thread_num
 
 class StockDataProc(object):
     
@@ -49,104 +52,47 @@ class StockDataProc(object):
         
         return df.ix[mask] 
     
-    def _get_data(self,itfs,itfparas,mergebys,index=''):
-        
-        def get_data(itf,itfpara,mergeby,index):
-            data=itf(index,**itfpara) if index else itf(**itfpara)
-            if not data.index.name==mergeby:
-                data.set_index(mergeby,inplace=True)
-            return data
-            
-        def get_datas(itfs,itfparas,mergebys,index):
-            for itf,itfpara,mergeby in itertools.izip(itfs,itfparas,mergebys):
-                yield get_data(itf,itfpara,mergeby,index)
-        
+    def getdata_multisource(self,itfs,itfparas,mergeby):
+
         if not self.base.is_iter(itfs):
-            return get_data(itfs,itfparas,mergebys,index)
+            return itfs(**itfparas)
         
         if len(itfs)!=len(itfparas):
             print '函数列表和其参数列表长度不等!'
             sys.exit()
         
-        mergebys=self.base.any_2list(mergebys)*len(itfs) if not self.base.is_iter(mergebys) else mergebys
+        #从所要求的接口抓取数据
+        th=MultiThreadTask()
+        data_iter=th.getdata(itfs,itfparas)
         
-        return pd.concat(get_datas(itfs,itfparas,mergebys,index),axis=1)
+        #统一数据的合并字段
+        data_list=[data.set_index(mergeby) if data.index.name==mergeby else data for data in data_iter]
+        
+        return pd.concat(data_list,axis=1)
     
     
-    def _get_data_mulprocess(self,getdata_itfs,getdata_itfparas,
-                             getdata_mergebys,iterkeys,
-                             handledata_index=0,max_process=mp.cpu_count()):
-        
-        def _iter_func(keys,itfs,itfparas,mergebys):
-            for k in keys:
-                yield self._get_data(itfs,itfparas,mergebys,k)
-            
-        def _divide_task(iterkeys,max_process):
-            
-            real_process=min(len(iterkeys),max_process)
-            
-            len_eachtask=len(iterkeys)/real_process
-            len_bonustask=len(iterkeys)%real_process
+    def _getdata_multiprocess(self,taskindexes,task_func,task_funcparas,
+                             process_num=None,thread_num=2):
 
-            tasklist=[iterkeys[len_eachtask*i:len_eachtask*(i+1)] for i in range(real_process)]
-            if len_bonustask>0:
-                map(lambda x,i:tasklist[i].append(x),iterkeys[-len_bonustask:],
-                         range(len_bonustask))
-            return tasklist
+        p=MultiProcessTask(processnum=process_num,threadnum=thread_num)
+        res=p.getdata(task_func,taskindexes,task_funcparas)
+        return res
+    
+    def getdata_iter(self,iterkeys,iterfunc,iterfunc_paras,handle_iter=0):
         
-#        assert _divide_task([1,2],4)==[[1],[2]]
-#        assert _divide_task([1,2,3,4],4)==[[1],[2],[3],[4]]
-#        assert _divide_task([1,2,3,4,5,6],4)==[[1,5],[2,6],[3],[4]]
+        def dataiter_concat(dataiter):
+            return pd.concat(dataiter)
         
-            
-        
-        def iter_as_list(process_keys,itfs,itfparas,mergebys):
-            gen_func=_iter_func(process_keys,itfs,itfparas,mergebys)
-            return list(gen_func)
-            
-        def iter_as_df(process_keys,itfs,itfparas,mergebys):
-            gen_func=_iter_func(process_keys,itfs,itfparas,mergebys)
-            return pd.concat(gen_func)
-            
-        def iter_write(process_keys,itfs,itfparas,mergebys):
+        def dataiter_tocsv(dataiter):
             pass
         
+        handle_itermethod=[dataiter_concat,dataiter_tocsv]
+        usemethod=handle_itermethod[handle_iter]
         
-        def process_func(process_task,handledata_itf,result,*args):
-            name = mp.current_process().name
-            print name, 'Starting'
-            result.append(handledata_itf(process_task,*args))
-        
-        handledata_itfs=[iter_as_df,iter_as_list,iter_write]
-        handledata_itf=handledata_itfs[handledata_index]
-        manager = mp.Manager()
-        
-        tasklists=_divide_task(iterkeys,max_process)
-        
-        completed_task_pool=manager.list([])
-        jobs=[]
-        for process_task in tasklists:  
-            p=mp.Process(name=process_task[0],target=process_func,args=(process_task,
-                         handledata_itf,completed_task_pool,
-                         getdata_itfs,getdata_itfparas,
-                         getdata_mergebys))
-            jobs.append(p)
-            p.start()
-    
-        for proc in jobs:
-            proc.join()
-        
-#        pool = mp.Pool()
-#        completed_task_pool=[]
-#        for process_task in tasklists:  
-#            process = pool.apply_async(process_func,
-#                                       (process_task,handledata_itf,
-#                                        getdata_itfs,getdata_itfparas,
-#                                        getdata_mergebys))
-#            completed_task_pool.append(process.get(timeout=100))
-    
-         
-        return completed_task_pool
+        dataiter=self._getdata_multiprocess(iterkeys,iterfunc,iterfunc_paras,
+                             process_num=process_num,thread_num=process_num)
+        return usemethod(dataiter)
+
 
 
     #test  itfHisDatD_proc(self,code,start='',end='',field   
