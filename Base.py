@@ -119,6 +119,10 @@ class Base(object):
                 return res
         
         
+        def addkey_2dictlist(self,dictlist,key,val):
+            addvallist=val if self.is_iter(val) else [val]*len(dictlist)
+            return map(lambda d,v:dict(d,**{key:v}),dictlist,addvallist)
+            
         #input--['k1','k2'],[1,2]
         #output--[{'k1': 1}, {'k2': 2}]
         def lists_2dictlists(self,key_list,val_list):

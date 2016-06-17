@@ -17,13 +17,25 @@ import pandas as pd
 import sys
 import numpy as np
 import itertools
+import logging
 import multiprocessing as mp
+from multiprocessing import JoinableQueue,Queue,Process
+import threading
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
 from databaseAPI.DatabaseInterface import DatabaseInterface
 from databaseAPI.DatabaseProc import DatabaseProc
 from dataPROC.MultiProcessTask import MultiProcessTask,MultiThreadTask
+
+
+logger=logging.getLogger(__name__)
+logger.setLevel(logging.INFO)# create a file handler
+handler=logging.FileHandler('test.log')
+handler.setLevel(logging.INFO)# create a logging format
+formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)# add the handlers to the logger
+logger.addHandler(handler)
 
 date_format=settings.date_format
 process_num=settings.process_num
@@ -37,6 +49,168 @@ class StockDataProc(object):
         self.wp=StockInterfaceWrap()
         self.stat=StockDataStat()
         self.db_proc=DatabaseProc()
+        
+    #==============批量数据抓取处理==============               
+    def _get_results(self,resultqueue):
+        while not resultqueue.empty():
+                yield resultqueue.get()
+        
+            
+    def _put_tasks(self,tasks,taskqueue,taskqueue_lk):
+        taskqueue_lk.acquire()
+        try:
+            #将数据塞入队列
+            for i in tasks:
+                taskqueue.put(i)
+            taskqueue_lk.notify()
+        finally:       
+            taskqueue_lk.release()
+    
+    def _start_threads(self,taskqueue,resultqueue,taskqueue_lk,threadnum):
+        for p in range(threadnum):
+            p = threading.Thread(target=self.multithread_task, args=(taskqueue,resultqueue,
+                                         taskqueue_lk),
+                                         name='TH'+str(p))
+            p.daemon=True
+            p.start()
+            
+    def multiprocess_task(self,taskqueue,resultqueue,taskqueue_lk,
+                          threadnum):    
+        #判断taskqueue是否为空的锁，因为queue的empty方法没有加锁，所以手工加锁
+        taskqueue_lk_th = threading.Condition(threading.Lock())
+        
+        #等待taskqueue放入完毕
+        taskqueue_lk.acquire()
+        if taskqueue.empty():
+             logger.info(multiprocessing.current_process().name+' wait!')
+             taskqueue_lk.wait()
+        taskqueue_lk.release()
+        
+        #开始线程，数据抓取的执行部分
+        self._start_threads(taskqueue,resultqueue,taskqueue_lk_th,threadnum)
+            
+        #进程等待所有线程结束
+        logger.info(multiprocessing.current_process().name+' join!')
+        taskqueue.join()
+        logger.info(multiprocessing.current_process().name+' end!')
+            
+            
+    def multithread_task(self,taskqueue,resultqueue,taskqueue_lk):
+        func_dict={'itfHDat_proc':self.wp.itfHDat_proc,
+        'itfHisDatD_proc':self.wp.itfHisDatD_proc
+                   }
+        #执行数据抓取直到taskqueue所有task被执行完
+        while 1:
+            #taskqueue中没有任务时候，线程挂起
+            #等待taskqueue放入完毕
+            logger.info(threading.current_thread().name+' start!')
+            taskqueue_lk.acquire()
+            if taskqueue.empty():
+                logger.info(threading.current_thread().name+' wait!')
+                taskqueue_lk.wait()
+            taskqueue_lk.release()
+        
+            #数据抓取，queue的get函数有锁
+            logger.info(threading.current_thread().name+' getdata!')
+            task_func,task_funcparas=taskqueue.get()
+            print task_func,task_funcparas
+            data=func_dict[task_func](**task_funcparas)
+            #数据写入，queue的put函数有锁
+            logger.info(threading.current_thread().name+' writedata!')
+            resultqueue.put(data)
+            #taskqueue的任务计数器减1，减到0释放上一级进程的join
+            taskqueue.task_done()
+        logger.info(threading.current_thread().name+' end!')
+    
+    def getdata_multiprocess(self,task_funcs,task_funcsparas,
+                             processnum=None,threadnum=2):
+        def _start_processes(taskqueue,resultqueue,taskqueue_lk,processnum,threadnum):
+            for i in range(processnum):
+                p = Process(target=self.multiprocess_task, args=(taskqueue,resultqueue,
+                                         taskqueue_lk,threadnum),name='P'+str(i))
+                p.daemon=True
+                p.start()
+                
+        processnum=processnum if processnum else multiprocessing.cpu_count()
+        #任务传送queue
+        taskqueue=JoinableQueue()
+        #任务写入/唤醒lock
+        taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
+        #结果传送queue
+        resultqueue=Queue()
+        
+        _start_processes(taskqueue,resultqueue,taskqueue_lk,
+                            processnum,threadnum)
+        #放入任务，唤醒进程
+        self._put_tasks(zip(task_funcs,task_funcsparas),taskqueue,taskqueue_lk)
+        logger.info('main join!')
+        taskqueue.join()
+        logger.info('main end!')
+        return self._get_results(resultqueue)
+    
+    def getdata_multithread(self,task_funcs,task_funcsparas,
+                             thread_maxnum=4):
+                
+        threadnum=min(len(task_funcs),thread_maxnum)
+        #任务传送queue
+        taskqueue=JoinableQueue()
+        #任务写入/唤醒lock
+        taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
+        #结果传送queue
+        resultqueue=Queue()
+        
+        self._start_threads(taskqueue,resultqueue,taskqueue_lk,
+                            threadnum)
+        #放入任务，唤醒进程
+        self._put_tasks(zip(task_funcs,task_funcsparas),taskqueue,taskqueue_lk)
+        
+        taskqueue.join()
+
+        return self._get_results(resultqueue)
+    
+    
+    
+    def test(self):
+        #wp=StockInterfaceWrap()
+#        date='2016-06-01'
+#        trade_field=[['volume','amount'],['p_change']]
+#        itfs=['itfHDat_proc','itfHisDatD_proc']
+#        
+#        itfparas=[{'code':'000001','start':date,'end':date,'field': trade_field[0]},
+#                      {'code':'000001','start':date,'end':date,'field': trade_field[1]}]
+#            
+#        mergeby='date'
+    
+        #res=self.getdata_multisource(itfs,itfparas,mergeby)
+        date='2016-06-01'
+        tickers=['000001','000002','300133','000718','600547']
+        trade_field=[['volume','amount'],['p_change']]
+        itfs=['itfHDat_proc','itfHisDatD_proc']
+        
+        itfparas=[{'start':date,'end':date,'field': trade_field[0]},
+                  {'start':date,'end':date,'field': trade_field[1]}]
+        
+        mergebys='date'
+        
+        iterlen=len(tickers)
+#        iterfunc_extend=[iterfunc]*paralen
+#        iterfunc_paras_extend=self.base.addkey_2dictlist([iterfunc_paras]*paralen,
+#                                                   iterkeynam,iterkeys)
+        
+        iterfunc=itertools.repeat(ex.getdata_multisource,iterlen)
+        iter_para_funcs=itertools.repeat(itfs,iterlen)
+        f_combineparas=lambda x,y :ex.base.addkey_2dictlist(x,
+                                                   'code',y)
+        iter_para_funcparas=f_combineparas(itertools.repeat(itfparas,iterlen)) if type(itfparas)==dict else map(f_combineparas,itertools.repeat(itfparas,iterlen),tickers)
+        iterpara=zip(iter_para_funcs,iter_para_funcparas)
+        
+        res=self.getdata_iter(tickers,'code',iterfunc,iterfunc_paras)
+        
+        
+        print res
+#        taskqueue=JoinableQueue()
+#        taskqueue.put(self.func_warp('itfHDat_proc',{'start':'2016-06-10'}))
+
         
     #给起始和终止日期，返回期间的行
     #colnam是date类型所在的列
@@ -62,23 +236,16 @@ class StockDataProc(object):
             sys.exit()
         
         #从所要求的接口抓取数据
-        th=MultiThreadTask()
-        data_iter=th.getdata(itfs,itfparas)
+        data_iter=self.getdata_multithread(itfs,itfparas)
         
         #统一数据的合并字段
-        data_list=[data.set_index(mergeby) if data.index.name==mergeby else data for data in data_iter]
+        data_list=[data.set_index(mergeby) if not data.index.name==mergeby else data for data in data_iter]
         
         return pd.concat(data_list,axis=1)
     
     
-    def _getdata_multiprocess(self,taskindexes,task_func,task_funcparas,
-                             process_num=None,thread_num=2):
 
-        p=MultiProcessTask(processnum=process_num,threadnum=thread_num)
-        res=p.getdata(task_func,taskindexes,task_funcparas)
-        return res
-    
-    def getdata_iter(self,iterkeys,iterfunc,iterfunc_paras,handle_iter=0):
+    def getdata_iter(self,taskiterkeys,taskiterkeynam,taskfuncs,taskfuncs_paras,handle_iter=0):
         
         def dataiter_concat(dataiter):
             return pd.concat(dataiter)
@@ -89,8 +256,20 @@ class StockDataProc(object):
         handle_itermethod=[dataiter_concat,dataiter_tocsv]
         usemethod=handle_itermethod[handle_iter]
         
-        dataiter=self._getdata_multiprocess(iterkeys,iterfunc,iterfunc_paras,
-                             process_num=process_num,thread_num=process_num)
+        #参数处理
+        iterlen=len(taskiterkeys)
+#        iterfunc_extend=[iterfunc]*paralen
+#        iterfunc_paras_extend=self.base.addkey_2dictlist([iterfunc_paras]*paralen,
+#                                                   iterkeynam,iterkeys)
+        
+        iterfunc=itertools.repeat(self.getdata_multisource,iterlen)
+        iter_para_funcs=itertools.repeat(iterfuncs,iterlen)
+        iter_para_funcparas=self.base.addkey_2dictlist(itertools.repeat(taskfuncs_paras,iterlen),
+                                                   taskiterkeynam,taskiterkeys)
+        iterpara=zip(iter_para_funcs,iter_para_funcparas)
+        
+        self.getdata_multisource(self,iterfunc,iterpara,'date')
+        dataiter=self.getdata_multiprocess(iterfunc_extend,iterfunc_paras_extend)
         return usemethod(dataiter)
 
 

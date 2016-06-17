@@ -18,11 +18,18 @@ try:
 except KeyError:
     pass
 from multiprocessing import JoinableQueue,Queue,Process
-import multiprocessing as mp
-import threading
 import multiprocessing
+import threading
+import logging
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 
+logger=logging.getLogger(__name__)
+logger.setLevel(logging.INFO)# create a file handler
+handler=logging.FileHandler('test.log')
+handler.setLevel(logging.INFO)# create a logging format
+formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)# add the handlers to the logger
+logger.addHandler(handler)
 
 
 class MultiProcessTask():
@@ -114,7 +121,7 @@ class MultiProcessTask():
 class MultiThreadTask():
     
     def __init__(self,threadnum=None):
-        self.threadnum=threadnum if threadnum else mp.cpu_count()
+        self.threadnum=threadnum if threadnum else multiprocessing.cpu_count()
         #任务传送queue
         self.taskqueue=JoinableQueue()
         #任务写入/唤醒lock
@@ -124,8 +131,9 @@ class MultiThreadTask():
     
     def start_threads(self,threadnum):
         for p in range(self.threadnum):
-            p = Process(target=self.multithread_task, args=(self.taskqueue,self.resultqueue,
-                                     self.taskqueue_lk))
+            p = threading.Thread(target=self.multithread_task, args=(self.taskqueue,self.resultqueue,
+                                     self.taskqueue_lk),
+                                     name='TH'+str(p))
             p.daemon=True
             p.start()
     
@@ -143,34 +151,43 @@ class MultiThreadTask():
             self.taskqueue_lk.notify()
         finally:       
             self.taskqueue_lk.release()
+
+        
     
     def multithread_task(self,taskqueue,resultqueue,taskqueue_lk):
         #执行数据抓取直到taskqueue所有task被执行完
         while 1:
             #taskqueue中没有任务时候，线程挂起
             #等待taskqueue放入完毕
+            logger.info(threading.current_thread().name+' start!')
             taskqueue_lk.acquire()
             if taskqueue.empty():
+                logger.info(threading.current_thread().name+' wait!')
                 taskqueue_lk.wait()
             taskqueue_lk.release()
         
             #数据抓取，queue的get函数有锁
+            logger.info(threading.current_thread().name+' getdata!')
             task_func,task_funcparas=taskqueue.get()
             data=task_func(**task_funcparas)
             #数据写入，queue的put函数有锁
+            logger.info(threading.current_thread().name+' writedata!')
             resultqueue.put(data)
             #taskqueue的任务计数器减1，减到0释放上一级进程的join
             taskqueue.task_done()
+            
+        logger.info(threading.current_thread().name+' end!')
         
     
     def getdata(self,task_funcs,task_funcsparas):
         #建立进程，在任务被放入完毕前，所有进程在等待状态
         self.start_threads(len(task_funcs))
+        
         #放入任务，唤醒进程
         self._put_tasks(zip(task_funcs,task_funcsparas))
         
         self.taskqueue.join()
-        
+        logger.info('main end!')
         return self._get_results()
     
     
