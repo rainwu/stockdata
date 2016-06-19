@@ -166,8 +166,7 @@ class StockDataProc(object):
         return self._get_results(resultqueue)
     
     def getdata_multithread(self,task_funcsiter=None,task_funcsiterparas={},
-                            task_funcsconst=None,task_funcsconstparas={},
-                            thread_maxnum=4):
+                            task_funcsconstparas={},thread_maxnum=4):
                 
         threadnum=min(len(task_funcsiter),thread_maxnum)
         #任务传送queue
@@ -204,31 +203,23 @@ class StockDataProc(object):
     
         #res=self.getdata_multisource(itfs,itfparas,mergeby)
         date='2016-06-01'
-        iterkeys=['000001','000002','300133','000718','600547']
-        iterkeynam='code'
+        tickers=['000001','000002','300133','000718','600547']
+        iternam='code'
         trade_field=[['volume','amount'],['p_change']]
-        #itfs=['itfHDat_proc','itfHisDatD_proc']
-        taskfuncs=self.wp.itfHDat_proc
-        #itfparas=[{'start':date,'end':date,'field': trade_field[0]},
-         #         {'start':date,'end':date,'field': trade_field[1]}]
-        taskfuncs_paras={'start':date,'end':date,'field': trade_field[0]}
+        itfs='itfHDat_proc'
+        
+        itfparas=[{'start':date,'end':date,'field': trade_field[0]},
+                  {'start':date,'end':date,'field': trade_field[1]}]
+        
         mergebys='date'
         
-#        task_funcsconst=taskfuncs
-#        task_funcsiterparas=iter([{iterkeynam:t} for t in iterkeys])
-#        task_funcsconstparas=taskfuncs_paras
-#        res=self.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
-#                            task_funcsconst=task_funcsconst,
-#                            task_funcsconstparas=task_funcsconstparas)
-                            
-        res=self.getdata_iter(iterkeys,iterkeynam,taskfuncs,
-                     taskfuncs_paras,mergebys)
+        
 
         
 
         
         
-        print res
+        print list(res)
 #        taskqueue=JoinableQueue()
 #        taskqueue.put(self.func_warp('itfHDat_proc',{'start':'2016-06-10'}))
 
@@ -284,14 +275,9 @@ class StockDataProc(object):
         usemethod=handle_itermethod[handle_iter]
         
         #参数处理
-        if not self.base.is_iter(taskfuncs):
-            task_funcsconst=taskfuncs
-            task_funcsiterparas=iter([{iterkeynam:t} for t in iterkeys])
-            task_funcsconstparas=taskfuncs_paras
-        else:
-            task_funcsconst=self.getdata_multisource
-            task_funcsiterparas=iter([{'itfiterparas':{iterkeynam:t}} for t in iterkeys])
-            task_funcsconstparas={'itfs':taskfuncs,'itfparas':taskfuncs_paras,
+        task_funcsconst=self.getdata_multisource
+        task_funcsiterparas=iter([{'itfiterparas':{iterkeynam:t}} for t in iterkeys])
+        task_funcsconstparas={'itfs':taskfuncs,'itfparas':taskfuncs_paras,
                         'mergeby':mergebys}
         
         dataiter=self.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
@@ -501,21 +487,25 @@ class StockDataProc(object):
 
     def get_datetrade(self,date):
         trade_field=[['volume','amount'],['p_change']]
-        #itfs=[self.wp.itfHDat_proc,self.wp.itfHisDatD_proc]
-        itfs=['itfHDat_proc','itfHisDatD_proc']
+        itfs=['itfHDat_proc',self.wp.itfHisDatD_proc]
+        
         itfparas=[{'start':date,'end':date,'field': trade_field[0]},
                   {'start':date,'end':date,'field': trade_field[1]}]
         
         mergebys='date'
         
-        tickers=self.db_proc.get_tickerall()[8:10]
+        tickers=self.db_proc.get_tickerall()[:10]
         
         #trade_data=self._get_data_iter(tickers,itfs,itfparas,mergebys)
-        trade_data=self.getdata_iter(tickers,'code',itfs,
-                     itfparas,mergebys)
-        trade_data.index=tickers
+        trade_data=self._get_data_mulprocess(itfs,itfparas,
+                             mergebys,tickers)
+        getdata_iter(tickers,'code',taskfuncs,
+                     taskfuncs_paras,mergebys=None,handle_iter=0)
+        
+        trade_df=pd.concat(trade_data)
+        trade_df.index=tickers
             
-        return trade_data
+        return trade_df
     
  
     def get_datetrade_ticksec(self,tickers,date):

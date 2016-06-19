@@ -20,6 +20,6 @@ from dataPROC.StockDataProc import StockDataProc
 if __name__ == '__main__':
     proc=StockDataProc()
 
-    res=proc.test()
+    res=proc.get_datetrade('2016-06-01')
     
     print res
