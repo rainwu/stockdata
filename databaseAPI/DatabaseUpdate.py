@@ -42,9 +42,9 @@ class DatabaseUpdate(object):
         leftindex=self.base.lists_minus(range(len(df.columns)),keyindex)
         
         #建立数据库查询字典列表
-        filt=hd_method(df[keyindex])
+        filt=iter(hd_method(df[keyindex]))
         #建立数据库更新字典表
-        update=hd_method(df[leftindex])
+        update=iter(hd_method(df[leftindex]))
         
         return (filt,update)
     
@@ -60,21 +60,21 @@ class DatabaseUpdate(object):
     def _update_updateiter(self,db_table,crawl_data):
         
         if crawl_data.empty:
-            print '无数据...跳过...'
+            print 'no data...pass...'
             return -1
         #获取数据库索引项名称，更新时按照此索引更新
         keyindex=db_table['keyindex']
         #获取需要更新的数据库的表名
         updatecollnam=db_table['collnam']
         
-        print updatecollnam+':StoBas part 开始初次插入数据.....'
+        print updatecollnam+':start updating data.....'
         #------数据批量更新------
         #建立批量数据更新语句
         df_proc=crawl_data
         db_filt_list,db_update_list=self._update_build_paras(df_proc,keyindex)
+        print db_filt_list,db_update_list
          #批量更新
-        print '批量更新数据....'
-        self.dbobj.db_updateiter(db_filt_list,db_update_list,updatecollnam)
+        #self.dbobj.db_updatemultiprocess(db_filt_list,db_update_list,updatecollnam)
         
     def _update_insertarriter(self,db_table,crawl_data):
         if crawl_data.empty:
@@ -102,7 +102,7 @@ class DatabaseUpdate(object):
          insert_data=self.base.pd_df2diclist(df)
          #插入数据
          if useiter:
-             self.dbobj.db_insertiter(insert_data,collnam)
+             self.dbobj.db_insertmultiprocess(insert_data,collnam)
          else:
              self.dbobj.db_insertmany(insert_data,collnam)
          self.dbobj.db_ensure_index(collnam,df.columns[index_id],unique=True)
@@ -223,7 +223,7 @@ class DatabaseUpdate(object):
         
 
         #------数据抓取------
-        print '原始数据抓取....'
+        print 'capture all ticker basic info....'
         crawl_data=self.wp.itfStoBas_proc(field=crawl_field,res_row_sel=res_row_sel)
         
         #------抓取数据处理------
@@ -309,7 +309,6 @@ class DatabaseUpdate(object):
                           
     def update_newtickers(self):
         new_tickers=self.get_newtickers()
-        print new_tickers
         if new_tickers:
             print '插入新股票，初始化....'
             self.insert_stockinfo_init(new_tickers)

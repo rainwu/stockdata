@@ -15,6 +15,7 @@ import time
 import pandas as pd
 import databaseAPI.db_settings as settings
 import databaseAPI.db_tables as tables
+from dataPROC.MultiProcessTask import MultiProcessTask
 from Base import Base
 
 use_sb='stkdb'
@@ -180,8 +181,8 @@ class DatabaseInterface(object):
         
         return 0
     
-    
-    def db_updateiter(self,filter_dicl,update_dicl,collnam,update_func=None,count=True):
+    def db_updatemultiprocess(self,filter_dicl,update_dicl,collnam,
+                              update_func=None,count=False):    
         if not update_func:
             update_func=self.db_updateone
         
@@ -189,16 +190,35 @@ class DatabaseInterface(object):
             self._db_updateiter_count(filter_dicl,update_dicl,
                              collnam,update_func)
         else:
-            total_len=len(filter_dicl)
-            process=0.0
-            for f,u in zip(filter_dicl,update_dicl):
-                print '更新数据.....'
-                update_func(f,u,collnam)
-                process=process+1
-                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+            p=MultiProcessTask()
+            task_funcsiterparas=iter([{'filter_dic':f,'update_dic':u} \
+                            for f in filter_dicl for u in update_dicl])
+            p.run_multiprocess(task_funcsiterparas=task_funcsiterparas,
+                            task_funcsconst=update_func,
+                            task_funcsconstparas={'collnam':collnam})
             print '数据更新完毕'
             
         return 0
+    
+    
+#    def db_updateiter(self,filter_dicl,update_dicl,collnam,update_func=None,count=True):
+#        if not update_func:
+#            update_func=self.db_updateone
+#        
+#        if count:
+#            self._db_updateiter_count(filter_dicl,update_dicl,
+#                             collnam,update_func)
+#        else:
+#            total_len=len(filter_dicl)
+#            process=0.0
+#            for f,u in zip(filter_dicl,update_dicl):
+#                print '更新数据.....'
+#                update_func(f,u,collnam)
+#                process=process+1
+#                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+#            print '数据更新完毕'
+#            
+#        return 0
         
     def _db_insertiter_count(self,data,collnam):
         #配置控制记录
@@ -225,25 +245,41 @@ class DatabaseInterface(object):
         self.db_updateone(ctrl_filter_dic,ctrl_updateover_dic,ctrl_table_struct['collnam'])
         
         return 0
-    
-    
-    def db_insertiter(self,data,collnam,count=True):    
+        
+        
+    def db_insertmultiprocess(self,data,collnam,count=False):    
         if not self.base.is_iter(data) or type(data)==dict:
             self.db_insertone(data,collnam)
             
         if count:
             self._db_insertiter_count(data,collnam)
         else:
-            total_len=len(data)
-            process=0.0
-            for x in data:
-                print '更新数据.....'
-                self.db_insertone(x,collnam)
-                process=process+1
-                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+            p=MultiProcessTask()
+            task_funcsiterparas=iter([{'data':dt} for dt in data])
+            p.run_multiprocess(task_funcsiterparas=task_funcsiterparas,
+                            task_funcsconst=self.db_insertone,
+                            task_funcsconstparas={'collnam':collnam})
             print '数据更新完毕'
             
         return 0
+    
+#    def db_insertiter(self,data,collnam,count=True):    
+#        if not self.base.is_iter(data) or type(data)==dict:
+#            self.db_insertone(data,collnam)
+#            
+#        if count:
+#            self._db_insertiter_count(data,collnam)
+#        else:
+#            total_len=len(data)
+#            process=0.0
+#            for x in data:
+#                print '更新数据.....'
+#                self.db_insertone(x,collnam)
+#                process=process+1
+#                print '已完成'+str(round(process*100/total_len,2))+'%.....'
+#            print '数据更新完毕'
+#            
+#        return 0
     
     def db_count(self,collnam):
         coll=self.db_connect()[collnam]

@@ -4,7 +4,7 @@ Created on Thu Nov 12 15:39:04 2015
 
 @author: saisn
 """
-home=True
+home=False
 
 import os
 import tushare as ts
@@ -27,3 +27,4 @@ timezone=pytz.timezone('Asia/Shanghai')
 process_num=3
 thread_num=2
 date_format="%Y-%m-%d"
+

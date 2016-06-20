@@ -44,16 +44,16 @@ class StockInterfaceTS(object):
         #请求获取数据
         #如果连接失败：
         #休息sleep_time秒，重复请求settings.try_times次
-#        for i in range(settings.try_times):
-#            try:
-#                res=itf(**itf_paras)
-#            except KeyboardInterrupt:
-#                print '连接出错，第'+str(i)+'重试中......'
-#                time.sleep(settings.sleep_time)
-#                continue
-#            break
+        for i in range(settings.try_times):
+            try:
+                res=itf(**itf_paras)
+            except KeyboardInterrupt:
+                print '连接出错，第'+str(i)+'重试中......'
+                time.sleep(settings.sleep_time)
+                continue
+            break
 ##        
-        res=itf(**itf_paras)
+        #res=itf(**itf_paras)
         return res
     
 #=================基本信息===========================
@@ -244,7 +244,6 @@ class StockInterfaceTS(object):
         #定义接口，定义接口参数
         itf=ts.get_hist_data
         itf_paras={'code':code,'start':start,'end':end,'ktype':ktype}
-        print itf_paras
         #获取数据
         res=self._getdata(itf,itf_paras)
         return res
@@ -376,7 +375,6 @@ class StockInterfaceTS(object):
         instance=ts.Idx()
         itf=instance.IdxCons
         ticker=self.list_to_str(ticker)
-        print ticker
         itf_paras={'ticker':ticker,'field':field,
                    'secID':secID,'intoDate':intoDate}
         res=self._getdata(itf,itf_paras)

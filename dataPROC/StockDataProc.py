@@ -24,9 +24,8 @@ import threading
 from Base import Base 
 from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 from dataPROC.StockDataStat import StockDataStat
-from databaseAPI.DatabaseInterface import DatabaseInterface
 from databaseAPI.DatabaseProc import DatabaseProc
-from dataPROC.MultiProcessTask import MultiProcessTask,MultiThreadTask
+from dataPROC.MultiProcessTask import MultiProcessTask
 
 
 logger=logging.getLogger(__name__)
@@ -41,6 +40,7 @@ date_format=settings.date_format
 process_num=settings.process_num
 thread_num=settings.thread_num
 
+
 class StockDataProc(object):
     
     def __init__(self,token=settings.token):
@@ -49,6 +49,10 @@ class StockDataProc(object):
         self.wp=StockInterfaceWrap()
         self.stat=StockDataStat()
         self.db_proc=DatabaseProc()
+        self.func_dict={
+        'itfHDat_proc':self.wp.itfHDat_proc,
+        'itfHisDatD_proc':self.wp.itfHisDatD_proc
+                   }
         
     #==============批量数据抓取处理==============               
     def _get_results(self,resultqueue):
@@ -221,14 +225,17 @@ class StockDataProc(object):
 #                            task_funcsconst=task_funcsconst,
 #                            task_funcsconstparas=task_funcsconstparas)
                             
-        res=self.getdata_iter(iterkeys,iterkeynam,taskfuncs,
-                     taskfuncs_paras,mergebys)
-
+        res=self.get_datetrade_concept('生物育种','2016-06-01')
+        
+        
+#        task_funcsiterparas=iter([{iterkeynam:t} for t in iterkeys])
+#        res=p.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
+#                            task_funcsconst=taskfuncs,task_funcsconstparas=taskfuncs_paras)
         
 
         
         
-        print res
+        return res
 #        taskqueue=JoinableQueue()
 #        taskqueue.put(self.func_warp('itfHDat_proc',{'start':'2016-06-10'}))
 
@@ -294,7 +301,9 @@ class StockDataProc(object):
             task_funcsconstparas={'itfs':taskfuncs,'itfparas':taskfuncs_paras,
                         'mergeby':mergebys}
         
-        dataiter=self.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
+        p=MultiProcessTask(funcdict=self.func_dict)
+        
+        dataiter=p.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
                             task_funcsconst=task_funcsconst,
                             task_funcsconstparas=task_funcsconstparas)
        
@@ -481,7 +490,7 @@ class StockDataProc(object):
 
     def get_datetrade_concept(self,connam,date):
         trade_field=[['volume','amount'],['p_change']]
-        itfs=[self.wp.itfHDat_proc,self.wp.itfHisDatD_proc]
+        itfs=['itfHDat_proc','itfHisDatD_proc']
         
         itfparas=[{'start':date,'end':date,'field': trade_field[0]},
                   {'start':date,'end':date,'field': trade_field[1]}]
@@ -490,14 +499,17 @@ class StockDataProc(object):
         
         contickers=self.db_proc.get_tickerconcept(connam)
         
-        trade_data=self._get_data_iter(contickers,itfs,itfparas,mergebys)
+        trade_data=self.getdata_iter(contickers,'code',itfs,
+                     itfparas,mergebys)
         
-        trade_df=pd.concat(trade_data)
-        trade_df.index=contickers
+        while trade_data.shape[0]!=len(contickers):
+            time.sleep(1)
         
-        trade_df['p_change_idx']=self.get_datetrade_ticksec(contickers,date)       
+        trade_data.index=contickers
         
-        return trade_df
+        trade_data['p_change_idx']=self.get_datetrade_ticksec(contickers,date)       
+        
+        return trade_data
 
     def get_datetrade(self,date):
         trade_field=[['volume','amount'],['p_change']]
@@ -508,11 +520,15 @@ class StockDataProc(object):
         
         mergebys='date'
         
-        tickers=self.db_proc.get_tickerall()[8:10]
+        tickers=self.db_proc.get_tickerall()[:50]
         
         #trade_data=self._get_data_iter(tickers,itfs,itfparas,mergebys)
         trade_data=self.getdata_iter(tickers,'code',itfs,
                      itfparas,mergebys)
+        
+        while trade_data.shape[0]!=len(tickers):
+            time.sleep(1)
+            
         trade_data.index=tickers
             
         return trade_data

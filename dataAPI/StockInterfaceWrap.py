@@ -124,7 +124,6 @@ class StockInterfaceWrap(object):
         
         
         #抽选行
-        print 'data row extract....'
         data=self._df_rowselect(data,res_row_sel,row_between_ops)
  
         #抽选列

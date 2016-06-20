@@ -21,7 +21,6 @@ from multiprocessing import JoinableQueue,Queue,Process
 import multiprocessing
 import threading
 import logging
-from dataAPI.StockInterfaceWrap import StockInterfaceWrap
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)# create a file handler
@@ -34,127 +33,78 @@ logger.addHandler(handler)
 
 class MultiProcessTask():
     
-    def __init__(self,processnum=None,threadnum=2):
-        self.processnum=processnum if processnum else mp.cpu_count()
+    def __init__(self,processnum=None,threadnum=2,thread_maxnum=4,funcdict={}):
+        self.processnum=processnum if processnum else multiprocessing.cpu_count()
         self.threadnum=threadnum
-        #任务传送queue
-        self.taskqueue=JoinableQueue()
-        #任务写入/唤醒lock
-        self.taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
-        #结果传送queue
-        self.resultqueue=Queue()
-    
-    def start_processes(self,task_func,taskindexes,task_funcparas):
-        for p in range(self.processnum):
-            p = Process(target=self.multiprocess_task, args=(self.taskqueue,self.resultqueue,
-                                     self.taskqueue_lk,self.threadnum,task_func,task_funcparas))
-            p.start()
-    
-    def _get_results(self):
-        while not self.resultqueue.empty():
-                yield self.resultqueue.get()
+        self.thread_maxnum=thread_maxnum
+        self.funcdict=funcdict
         
-            
-    def _put_tasks(self,tasks):
-        self.taskqueue_lk.acquire()
+    
+    def _get_results(self,resultqueue):
+        while not resultqueue.empty():
+                yield resultqueue.get()
+    
+    def _put_tasks(self,tasks,taskqueue,taskqueue_lk):
+        taskqueue_lk.acquire()
         try:
             #将数据塞入队列
             for i in tasks:
-                self.taskqueue.put(i)
-            self.taskqueue_lk.notify()
+                taskqueue.put(i)
+            taskqueue_lk.notify()
         finally:       
-            self.taskqueue_lk.release()
+            taskqueue_lk.release()
     
-    def multithread_task(self,taskqueue,resultqueue,taskqueue_lk_th,
-                          task_func,task_funcparas):
-        #执行数据抓取直到taskqueue所有task被执行完
-        while 1:
-            #taskqueue中没有任务时候，线程挂起
-            taskqueue_lk_th.acquire()
-            if taskqueue.empty():
-                taskqueue_lk_th.wait()
-            taskqueue_lk_th.release()
-                 
-            #数据抓取，queue的get函数有锁
-            task_funcindex=taskqueue.get()
-            data=task_func(task_funcindex,**task_funcparas)
-            #数据写入，queue的put函数有锁
-            resultqueue.put(data)
-            #taskqueue的任务计数器减1，减到0释放上一级进程的join
-            taskqueue.task_done()
-
+    def _start_threads(self,taskqueue,taskqueue_lk,
+                       task_funcsconst,task_funcsconstparas={},
+                       resultqueue=None):
+                           
+        for p in range(self.threadnum):
+            p = threading.Thread(target=self.multithread_task, args=(taskqueue,
+                                         taskqueue_lk,task_funcsconst,
+                                         task_funcsconstparas,resultqueue),
+                                         name='TH'+str(p))
+            p.daemon=True
+            p.start()
         
-    
-    def multiprocess_task(self,taskqueue,resultqueue,taskqueue_lk,
-                          thread_num,task_func,task_funcparas):    
+    def _start_processes(self,taskqueue,taskqueue_lk,task_funcsconst,
+                             task_funcsconstparas,resultqueue):
+        for i in range(self.processnum):
+            p = Process(target=self.multiprocess_task, args=(taskqueue,
+                                         taskqueue_lk,
+                                         task_funcsconst,task_funcsconstparas,
+                                         resultqueue
+                                         ),name='P'+str(i))
+            p.daemon=True
+            p.start()        
+        
+    def multiprocess_task(self,taskqueue,taskqueue_lk,
+                          task_funcsconst,task_funcsconstparas={},
+                          resultqueue=None):    
         #判断taskqueue是否为空的锁，因为queue的empty方法没有加锁，所以手工加锁
         taskqueue_lk_th = threading.Condition(threading.Lock())
-         
+        
         #等待taskqueue放入完毕
         taskqueue_lk.acquire()
         if taskqueue.empty():
+             logger.info(multiprocessing.current_process().name+' wait!')
              taskqueue_lk.wait()
         taskqueue_lk.release()
         
         #开始线程，数据抓取的执行部分
-        for th in range(thread_num):
-            th = threading.Thread(target=self.multithread_task, args=(taskqueue,resultqueue,
-                                     taskqueue_lk_th,task_func,task_funcparas),
-                                     name=multiprocessing.current_process().name+str(th))
-            th.daemon=True
-            th.start()
+        self._start_threads(taskqueue,taskqueue_lk_th,
+                            task_funcsconst,task_funcsconstparas,
+                            resultqueue)
             
         #进程等待所有线程结束
+        logger.info(multiprocessing.current_process().name+' join!')
         taskqueue.join()
-
-        
-    
-    def getdata(self,task_func,taskindexes,task_funcparas):
-        #建立进程，在任务被放入完毕前，所有进程在等待状态
-        self.start_processes(task_func,taskindexes,task_funcparas)
-        #放入任务，唤醒进程
-        self._put_tasks(taskindexes)
-        self.taskqueue.join()
-        return self._get_results()
-        
-
-class MultiThreadTask():
-    
-    def __init__(self,threadnum=None):
-        self.threadnum=threadnum if threadnum else multiprocessing.cpu_count()
-        #任务传送queue
-        self.taskqueue=JoinableQueue()
-        #任务写入/唤醒lock
-        self.taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
-        #结果传送queue
-        self.resultqueue=Queue()
-    
-    def start_threads(self,threadnum):
-        for p in range(self.threadnum):
-            p = threading.Thread(target=self.multithread_task, args=(self.taskqueue,self.resultqueue,
-                                     self.taskqueue_lk),
-                                     name='TH'+str(p))
-            p.daemon=True
-            p.start()
-    
-    def _get_results(self):
-        while not self.resultqueue.empty():
-                yield self.resultqueue.get()
-        
+        logger.info(multiprocessing.current_process().name+' end!')
             
-    def _put_tasks(self,tasks):
-        self.taskqueue_lk.acquire()
-        try:
-            #将数据塞入队列
-            for i in tasks:
-                self.taskqueue.put(i)
-            self.taskqueue_lk.notify()
-        finally:       
-            self.taskqueue_lk.release()
+            
+    def multithread_task(self,taskqueue,taskqueue_lk,
+                         task_funcsconst=None,
+                         task_funcsconstparas={},resultqueue=None):
 
-        
-    
-    def multithread_task(self,taskqueue,resultqueue,taskqueue_lk):
         #执行数据抓取直到taskqueue所有task被执行完
         while 1:
             #taskqueue中没有任务时候，线程挂起
@@ -167,37 +117,95 @@ class MultiThreadTask():
             taskqueue_lk.release()
         
             #数据抓取，queue的get函数有锁
+            if task_funcsconst is None:
+                task_funcnam,task_funcparas=taskqueue.get()
+                task_func=self.func_dict[task_funcnam]
+            else:
+                task_funcparas=taskqueue.get()
+                task_func=task_funcsconst
+                
             logger.info(threading.current_thread().name+' getdata!')
-            task_func,task_funcparas=taskqueue.get()
+            task_funcparas.update(task_funcsconstparas)
             data=task_func(**task_funcparas)
             #数据写入，queue的put函数有锁
             logger.info(threading.current_thread().name+' writedata!')
-            resultqueue.put(data)
+            
+            if not resultqueue is None: 
+                resultqueue.put(data)
             #taskqueue的任务计数器减1，减到0释放上一级进程的join
             taskqueue.task_done()
-            
         logger.info(threading.current_thread().name+' end!')
         
     
-    def getdata(self,task_funcs,task_funcsparas):
-        #建立进程，在任务被放入完毕前，所有进程在等待状态
-        self.start_threads(len(task_funcs))
+    def run_multiprocess(self,task_funcsiter=None,task_funcsiterparas={},
+                            task_funcsconst=None,task_funcsconstparas={},
+                            resultqueue=None):
+        #任务传送queue
+        taskqueue=JoinableQueue()
+        #任务写入/唤醒lock
+        taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
         
+        self._start_processes(taskqueue,taskqueue_lk,task_funcsconst,
+                            task_funcsconstparas,resultqueue)
         #放入任务，唤醒进程
-        self._put_tasks(zip(task_funcs,task_funcsparas))
-        
-        self.taskqueue.join()
+        if task_funcsconst is None:
+            self._put_tasks(zip(task_funcsiter,task_funcsiterparas),taskqueue,taskqueue_lk)
+        else:
+            self._put_tasks(task_funcsiterparas,taskqueue,taskqueue_lk)
+        logger.info('main join!')
+        taskqueue.join()
         logger.info('main end!')
-        return self._get_results()
+        
+        return 
     
     
-    
+    def run_multithread(self,task_funcsiter=None,task_funcsiterparas={},
+                            task_funcsconst=None,task_funcsconstparas={},
+                            resultqueue=None):
+                
+        self.threadnum=min(len(task_funcsiter),self.thread_maxnum)
+        #任务传送queue
+        taskqueue=JoinableQueue()
+        #任务写入/唤醒lock
+        taskqueue_lk = threading.Condition(threading.Lock())
+        
+        self._start_threads(taskqueue,taskqueue_lk,
+                            task_funcsconst,
+                            task_funcsconstparas,resultqueue)
+        #放入任务，唤醒进程
+        if task_funcsconst is None:
+            self._put_tasks(zip(task_funcsiter,task_funcsiterparas),taskqueue,taskqueue_lk)
+        else:
+            self._put_tasks(task_funcsiterparas,taskqueue,taskqueue_lk)
+        
+        taskqueue.join()
 
+        return 
+  
+  
+    def getdata_multiprocess(self,task_funcsiter=None,task_funcsiterparas={},
+                            task_funcsconst=None,task_funcsconstparas={}):
+        #结果传送queue
+        resultqueue=Queue()
+        
+        self.run_multiprocess(task_funcsiter=task_funcsiter,
+                              task_funcsiterparas=task_funcsiterparas,
+                            task_funcsconst=task_funcsconst,
+                            task_funcsconstparas=task_funcsconstparas,
+                            resultqueue=resultqueue)
+        
+        return self._get_results(resultqueue)
     
-
-
-    
-    
-
-#
-#logger.info('Hello baby')
+    def getdata_multithread(self,task_funcsiter=None,task_funcsiterparas={},
+                            task_funcsconst=None,task_funcsconstparas={}):
+        #结果传送queue
+        resultqueue=Queue()
+        
+        self.run_multithread(task_funcsiter=task_funcsiter,
+                              task_funcsiterparas=task_funcsiterparas,
+                            task_funcsconst=task_funcsconst,
+                            task_funcsconstparas=task_funcsconstparas,
+                            resultqueue=resultqueue)
+        
+        return self._get_results(resultqueue)
+           

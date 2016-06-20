@@ -14,12 +14,11 @@ from multiprocessing import Pool
 import multiprocessing as mp
 import pandas as pd
 from dataPROC.StockDataProc import StockDataProc
-
+from databaseAPI.DatabaseInterface import DatabaseInterface
+from databaseAPI.DatabaseUpdate import DatabaseUpdate
 
         
 if __name__ == '__main__':
-    proc=StockDataProc()
 
-    res=proc.get_datetrade('2016-06-01')
-    
-    print res
+    ex=DatabaseUpdate()
+    ex.update_stockinfo_numerics()
