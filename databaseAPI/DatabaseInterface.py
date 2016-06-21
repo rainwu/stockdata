@@ -30,7 +30,7 @@ class DatabaseInterface(object):
         for i in range(settings.try_times):
             try:
                 res=op(**op_paras)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt,pymongo.errors.NetworkTimeout:
                 print '连接出错，第'+str(i)+'重试中......'
                 time.sleep(settings.sleep_time)
                 if i==(settings.try_times-1):

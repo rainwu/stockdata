@@ -41,9 +41,9 @@ class DatabaseUpdate(object):
         keyindex=self.base.any_2list(keyindex)
         leftindex=self.base.lists_minus(range(len(df.columns)),keyindex)
         
-        #建立数据库查询字典列表
+        #建立数据库查询字典列表，由于列表可能很长，改为iter
         filt=iter(hd_method(df[keyindex]))
-        #建立数据库更新字典表
+        #建立数据库更新字典表，由于列表可能很长，改为iter
         update=iter(hd_method(df[leftindex]))
         
         return (filt,update)
@@ -72,9 +72,8 @@ class DatabaseUpdate(object):
         #建立批量数据更新语句
         df_proc=crawl_data
         db_filt_list,db_update_list=self._update_build_paras(df_proc,keyindex)
-        print db_filt_list,db_update_list
          #批量更新
-        #self.dbobj.db_updatemultiprocess(db_filt_list,db_update_list,updatecollnam)
+        self.dbobj.db_updatemultiprocess(db_filt_list,db_update_list,updatecollnam)
         
     def _update_insertarriter(self,db_table,crawl_data):
         if crawl_data.empty:
@@ -326,6 +325,9 @@ class DatabaseUpdate(object):
         self.update_stockinfo_numerics()
         print '更新沪港通余额信息...'
         self.insert_stockhgt()
+    
+    def update_monthly(self):
+        self.update_stockinfo_basic()
     
 #['300512', '603737', '601611', '300516', '300513']
     

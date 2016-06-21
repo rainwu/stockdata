@@ -20,5 +20,25 @@ from databaseAPI.DatabaseUpdate import DatabaseUpdate
         
 if __name__ == '__main__':
 
-    ex=DatabaseUpdate()
-    ex.update_stockinfo_numerics()
+#    ex=DatabaseUpdate()
+#    ex.update_stockinfo_basic()
+def decoa(func):
+    
+    def a(*args,**kw):
+        return len(func(*args,**kw))+2
+        
+    return a
+
+def decob(func):
+    def b(*args,**kw):
+        return func(*args,**kw)[:2]
+    return b
+
+#myfunc=decob(myfunc)
+#myfunc=decoa(decob(myfunc))=decoa(b)
+
+@decoa
+@decob
+def myfunc():
+    return [1,2,3]
+    

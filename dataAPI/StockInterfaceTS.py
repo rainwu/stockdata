@@ -40,30 +40,82 @@ class StockInterfaceTS(object):
     #itf_paras:接口参数,字典
     #返回：
     #pandas dataframe
-    def _getdata(self,itf,itf_paras={}):
-        #请求获取数据
-        #如果连接失败：
-        #休息sleep_time秒，重复请求settings.try_times次
-        for i in range(settings.try_times):
-            try:
-                res=itf(**itf_paras)
-            except KeyboardInterrupt:
-                print '连接出错，第'+str(i)+'重试中......'
-                time.sleep(settings.sleep_time)
-                continue
-            break
-##        
-        #res=itf(**itf_paras)
-        return res
+#    def _getdata(self,itf,itf_paras={}):
+#        #请求获取数据
+#        #如果连接失败：
+#        #休息sleep_time秒，重复请求settings.try_times次
+#        for i in range(settings.try_times):
+#            try:
+#                res=itf(**itf_paras)
+#            except KeyboardInterrupt:
+#                print '连接出错，第'+str(i)+'重试中......'
+#                time.sleep(settings.sleep_time)
+#                continue
+#            break
+###        
+#        #res=itf(**itf_paras)
+#        return res
+
+    #数据抓取装饰器，实现网络问题时重新抓取
+    #参数说明：
+    #request_itf[function]：request的接口函数，如fd.FundDiv
+    #*args, **kwargs:request的接口函数参数
+    #返回：
+    #视接口函数返回而定，tushare和通联的返回pd.dataframe
+    #**如果返回值为空，则也返回
+    def deco_request_data(self,request_itf):
+        
+        def _request_data(*args, **kwargs):
+            for i in range(settings.try_times):
+                try:
+                    res=request_itf(*args, **kwargs)
+                except KeyboardInterrupt:
+                    print '连接出错，第'+str(i)+'重试中......'
+                    time.sleep(settings.sleep_time)
+                    continue
+                break
+            if res is None:
+                pass#LOG
+            return res
+            
+        return _request_data
+    
+    #抽取数据中的行、列  考虑使用PandaSQL
+    def deco_data_extractcol(self,select_colnams=None):
+        
+        def _data_extractcol(func):
+            
+            def __data_extractcol(df):
+                if select_colnams is None:
+                    return df
+                else:
+                    try:
+                        return df[select_colnams]
+                    except KeyError:
+                        pass#LOG
+                    finally:
+                        return df
+                        
+            return __data_extractcol
+            
+        return _data_extractcol
+    
+    def deco_data_extractcrow(self,func):
+        pass
+    
+    
+    def get_data(self)
+            
     
 #=================基本信息===========================
     #股票概念分类
     #来自sina财经
     #返回:
     #所有股票的概念分类表 pandas dataframe
+    @deco_request_data
     def getConCla(self):
         #定义接口，定义接口参数
-        itf=ts.get_concept_classified
+        equest_itf=ts.get_concept_classified
         #获取数据
         res=self._getdata(itf)
         return res
