@@ -35,7 +35,7 @@ class DataCapture(object):
         self.ba=Base()
     
     def isEmptydf(self,df):
-        pass
+        return (df==defaultna) or max(df.shape)==0
     
         #数据抓取,实现网络问题时重新抓取
     #参数说明：
@@ -68,6 +68,7 @@ class DataCapture(object):
     def data_extract(self,df,select_colnams=defaultna,select_rows=defaultna):
         
         #抽取列
+        #列名不存在，返回non
         def data_extractcol(df,select_colnams):
             if select_colnams in emptylist:
                 return df
@@ -99,8 +100,9 @@ class DataCapture(object):
                 return df.loc[df[col_nam].isin(row_vals)]
             except KeyError:
                 pass#LOG
-                return defaultna
+                return defaultna 
         
+        #行名不存在返回空df
         def data_extractrow(df,select_rows):
             if select_rows in emptylist:
                 return df
@@ -114,7 +116,8 @@ class DataCapture(object):
 
         return data_extractcol(data_extractrow(df,select_rows),select_colnams)
     
-    #所有接口通用的数据抓取流程            
+    #所有接口通用的数据抓取流程    
+        
     def data_capture_flow(self,request_itf,select_colnams=defaultna,
                       select_rows=defaultna,*args,**kwargs):
                           
@@ -214,79 +217,87 @@ class StockInterfaceTS(object):
     #股票基本面数据TS版本
     #返回:
     #所有股票的概念分类表 pandas dataframe
-    def getStoBas(self):
-        itf=ts.get_stock_basics
-        res=self._getdata(itf)
+    def getStoBas(self,select_colnams=defaultna,
+                  select_rows=defaultna):
+        request_itf=ts.get_stock_basics
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
     
     #获取创业板股票列表
-    def getGemCla(self):
-        itf=ts.get_gem_classified
-        res=self._getdata(itf)
+    def getGemCla(self,select_colnams=defaultna,
+                  select_rows=defaultna):
+        request_itf=ts.get_gem_classified
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
         
     #获取沪深300股票列表和权重  
-    def getHs300(self):
-        itf=ts.get_hs300s
-        res=self._getdata(itf)
+    def getHs300(self,select_colnams=defaultna,
+                  select_rows=defaultna):
+        request_itf=ts.get_hs300s
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
         
     
     
-    #指数基本数据
-    #参数说明
-    #ticker--指数代码，str或list of str
-    #field--指定返回的项，list或''
-    #返回;
-    #dataframe
-    def getIndex(self,ticker='',field='',secID=''):
-        #输入处理
-        #将ticker list转为满足通联接口的str格式
-        ticker=self.list_to_str(ticker)
-        #定义接口，定义接口参数
-        instance=ts.Idx()
-        itf=instance.Idx
-        itf_paras={'ticker':ticker,'field':field,
-                   'secID':secID}
-        res=self._getdata(itf,itf_paras)
-        return res
-        
-    
-    #指数成分信息
-    #参数说明
-    #ticker--指数代码，str或list of str
-    #field--指定返回的项，list或''
-    #返回;
-    #dataframe
-    def getIndexCons(self,ticker='',field=''):
-        #输入处理
-        #将ticker list转为满足通联接口的str格式
-        ticker=self.list_to_str(ticker)
-        #取某一天的指数成分表，默认为当日
-#        if len(intoDate)==0:
-#            intoDate=self.ba.today_as_str(date_format="%Y-%m-%d")
-        #定义接口，定义接口参数
-        instance=ts.Idx()
-        itf=instance.IdxCons
-        itf_paras={'ticker':ticker,'field':field}
-        res=self._getdata(itf,itf_paras)
-        return res
-    
-    #H表示停牌，R表示复牌
-    def getSecTips(self,tipsTypeCD='H'):
-        instance=ts.Market()
-        itf=instance.SecTips
-        itf_paras={'tipsTypeCD':tipsTypeCD}
-        res=self._getdata(itf,itf_paras)
-        return res
+#    #指数基本数据
+#    #参数说明
+#    #ticker--指数代码，str或list of str
+#    #field--指定返回的项，list或''
+#    #返回;
+#    #dataframe
+#    def getIndex(self,ticker='',field='',secID=''):
+#        #输入处理
+#        #将ticker list转为满足通联接口的str格式
+#        ticker=self.list_to_str(ticker)
+#        #定义接口，定义接口参数
+#        instance=ts.Idx()
+#        itf=instance.Idx
+#        itf_paras={'ticker':ticker,'field':field,
+#                   'secID':secID}
+#        res=self._getdata(itf,itf_paras)
+#        return res
+#        
+#    
+#    #指数成分信息
+#    #参数说明
+#    #ticker--指数代码，str或list of str
+#    #field--指定返回的项，list或''
+#    #返回;
+#    #dataframe
+#    def getIndexCons(self,ticker='',field=''):
+#        #输入处理
+#        #将ticker list转为满足通联接口的str格式
+#        ticker=self.list_to_str(ticker)
+#        #取某一天的指数成分表，默认为当日
+##        if len(intoDate)==0:
+##            intoDate=self.ba.today_as_str(date_format="%Y-%m-%d")
+#        #定义接口，定义接口参数
+#        instance=ts.Idx()
+#        itf=instance.IdxCons
+#        itf_paras={'ticker':ticker,'field':field}
+#        res=self._getdata(itf,itf_paras)
+#        return res
+#    
+#    #H表示停牌，R表示复牌
+#    def getSecTips(self,tipsTypeCD='H'):
+#        instance=ts.Market()
+#        itf=instance.SecTips
+#        itf_paras={'tipsTypeCD':tipsTypeCD}
+#        res=self._getdata(itf,itf_paras)
+#        return res
     
 #=============事件信息===================================
     #全部新股信息
     #返回:
     #所pandas dataframe
-    def getNewSto(self):
-        itf=ts.new_stocks
-        res=self._getdata(itf)
+    def getNewSto(self,select_colnams=defaultna,
+                  select_rows=defaultna):
+        request_itf=ts.new_stocks
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
     
     ##基金持股数据
