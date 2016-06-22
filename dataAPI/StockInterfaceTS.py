@@ -25,129 +25,188 @@ import settings
 from Base import Base
 
 date_format=settings.date_format
+emptylist=settings.emptylist
+defaultna=settings.defaultna
 
-class StockInterfaceTS(object):
+class DataCapture(object):
     
     def __init__(self,token=settings.token):
         self.token=settings.token
         self.ba=Base()
     
-
-        
-    #ts接口数据抓取执行程序
-    #参数说明：
-    #itf：接口函数名称或函数变量，如fd.FundDiv
-    #itf_paras:接口参数,字典
-    #返回：
-    #pandas dataframe
-#    def _getdata(self,itf,itf_paras={}):
-#        #请求获取数据
-#        #如果连接失败：
-#        #休息sleep_time秒，重复请求settings.try_times次
-#        for i in range(settings.try_times):
-#            try:
-#                res=itf(**itf_paras)
-#            except KeyboardInterrupt:
-#                print '连接出错，第'+str(i)+'重试中......'
-#                time.sleep(settings.sleep_time)
-#                continue
-#            break
-###        
-#        #res=itf(**itf_paras)
-#        return res
-
-    #数据抓取装饰器，实现网络问题时重新抓取
+    def isEmptydf(self,df):
+        pass
+    
+        #数据抓取,实现网络问题时重新抓取
     #参数说明：
     #request_itf[function]：request的接口函数，如fd.FundDiv
     #*args, **kwargs:request的接口函数参数
     #返回：
     #视接口函数返回而定，tushare和通联的返回pd.dataframe
     #**如果返回值为空，则也返回
-    def deco_request_data(self,request_itf):
+    def data_request(self,request_itf,*args, **kwargs):
         
-        def _request_data(*args, **kwargs):
-            for i in range(settings.try_times):
-                try:
-                    res=request_itf(*args, **kwargs)
-                except KeyboardInterrupt:
-                    print '连接出错，第'+str(i)+'重试中......'
-                    time.sleep(settings.sleep_time)
-                    continue
-                break
-            if res is None:
-                pass#LOG
-            return res
-            
-        return _request_data
+        for i in range(settings.try_times):
+            try:
+                res=request_itf(*args, **kwargs)
+            except KeyboardInterrupt:
+                print '连接出错，第'+str(i)+'重试中......'
+                time.sleep(settings.sleep_time)
+                continue
+            break
+        if res is None:
+            pass#LOG
+        return res
+
     
     #抽取数据中的行、列  考虑使用PandaSQL
-    def deco_data_extractcol(self,select_colnams=None):
+    #df--pd.dataframe,带抽取的数据框
+    #select_colnams--list of str or str,df的列名
+    #select_rows--dict, {'colnam':[rowvalues],'colnam':[rowvalues]...}
+    #返回：
+    #如果select_xxx是列表，则返回pd.df；如果是str，则返回pd.series
+    def data_extract(self,df,select_colnams=defaultna,select_rows=defaultna):
         
-        def _data_extractcol(func):
+        #抽取列
+        def data_extractcol(df,select_colnams):
+            if select_colnams in emptylist:
+                return df
+            else:
+                try:
+                    return df[select_colnams]
+                except KeyError:
+                    pass#LOG
+                    return defaultna
+        
+        #按照index值抽取行
+        def _data_extractrow_byindex(df,index_vals):
+            if index_vals in emptylist:
+                return df
+            try:
+                return df.loc[df.index.isin(index_vals)]
+            except KeyError:
+                pass#LOG
+                return defaultna
+        
+        #按行的值抽取行
+        def _data_extractrow_byval(df,col_nam,row_vals):
+            if row_vals in emptylist:
+                return df
+                
+            row_vals=self.base.any_2list(row_vals)
             
-            def __data_extractcol(df):
-                if select_colnams is None:
-                    return df
-                else:
-                    try:
-                        return df[select_colnams]
-                    except KeyError:
-                        pass#LOG
-                    finally:
-                        return df
-                        
-            return __data_extractcol
+            try:
+                return df.loc[df[col_nam].isin(row_vals)]
+            except KeyError:
+                pass#LOG
+                return defaultna
+        
+        def data_extractrow(df,select_rows):
+            if select_rows in emptylist:
+                return df
             
-        return _data_extractcol
-    
-    def deco_data_extractcrow(self,func):
-        pass
-    
-    
-    def get_data(self)
+            indexnam=df.index.name
             
+            for colnam,rowval in select_rows.items():
+                df=_data_extractrow_byindex(df,rowval) if colnam==indexnam \
+                    else _data_extractrow_byval(df,colnam,rowval)
+            return df
+
+        return data_extractcol(data_extractrow(df,select_rows),select_colnams)
     
-#=================基本信息===========================
+    #所有接口通用的数据抓取流程            
+    def data_capture_flow(self,request_itf,select_colnams=defaultna,
+                      select_rows=defaultna,*args,**kwargs):
+                          
+        datadf=self.data_request(request_itf,*args, **kwargs)
+        datadf_extracted=self.data_extract(datadf,select_colnams,select_rows)
+        return datadf_extracted
+        
+def test_DataCapture():
+    cap=DataCapture()
+    #data_request(self,request_itf,*args, **kwargs)
+    request_itf=ts.get_concept_classified
+    data=cap.data_request(request_itf)
+    print data.head()
+    #data_extractcol(df,select_colnams):
+    import pandas as pd
+    df=pd.DataFrame({'col1':[1,2,3],'col2':[4,5,6]},index=['i1','i2','i3'])
+    select_colnams_instances=[['col1'],'col1',None,[],['col1','col2'],
+                              'xxx',['col1','xxx']]
+    data=iter([data_extractcol(df,x) for x in select_colnams_instances])
+    next(data)
+    #_data_extractrow_byindex(df,index_vals)
+    df=pd.DataFrame({'col1':[1,2,3],'col2':[4,5,6]},index=['i1','i2','i3'])
+    index_vals_instances=[None,[],'',['i1','i2'],'i1',['i4','i1'],['i4'],'i4']
+    data=iter([_data_extractrow_byindex(df,x) for x in index_vals_instances])
+    next(data)
+    #_data_extractrow_byval(df,col_nam,row_vals):
+    df=pd.DataFrame({'col1':[1,2,3],'col2':[4,5,6]},index=['i1','i2','i3'])
+    col_nam='col2'
+    row_vals_instances=[None,[],'',1,[1],4,[4,6],[4,7]]
+    data=iter([_data_extractrow_byval(df,col_nam,x) for x in row_vals_instances])
+    next(data)
+   
+def test_StockInterfaceTS():
+    ex=StockInterfaceTS()
+    ticker=['000001',['000001'],'100000']
+    data=iter([ex.getEqu(x) for x in ticker])
+    next(data)
+    
+    
+#tushare接口
+class StockInterfaceTS(object):
+    
+    def __init__(self,token=settings.token):
+        self.token=settings.token
+        self.cap=DataCapture()
+    
+    
+#=================基本信息==========================
+    
     #股票概念分类
     #来自sina财经
     #返回:
     #所有股票的概念分类表 pandas dataframe
-    @deco_request_data
-    def getConCla(self):
+    def getConCla(self,select_colnams=defaultna,select_rows=defaultna):
         #定义接口，定义接口参数
-        equest_itf=ts.get_concept_classified
+        request_itf=ts.get_concept_classified
         #获取数据
-        res=self._getdata(itf)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
     
     #股票行业分类TS版本
     #返回：
     #所有股票的行业分类表， pandas dataframe
-    def getIndCla(self):
+    def getIndCla(self,select_colnams=defaultna,select_rows=defaultna):
         #定义接口，定义接口参数
-        itf=ts.get_industry_classified
+        request_itf=ts.get_industry_classified
         #获取数据
-        res=self._getdata(itf)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows)
         return res
     
     #股票行业分类通联版本
-    def getEquInd(self,ind_code='010303'):
+    def getEquInd(self,ind_code='010303',select_colnams=defaultna,
+                  select_rows=defaultna):
         #定义接口，定义接口参数
         instance=ts.Equity()
-        itf=instance.EquIndustry
-        itf_paras={'industryVersionCD':ind_code}
+        request_itf=instance.EquIndustry
         #获取数据
-        res=self._getdata(itf,itf_paras)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows,industryVersionCD=ind_code)
         return res
     
     #股票基本数据通联版本
-    def getEqu(self,ticker='',equTypeCD='A'):
+    def getEqu(self,ticker,equTypeCD='A',select_colnams=defaultna,
+                  select_rows=defaultna):
         #定义接口，定义接口参数
         instance=ts.Equity()
-        itf=instance.Equ
-        itf_paras={'equTypeCD':equTypeCD,'ticker':ticker}
+        request_itf=instance.Equ
         #获取数据
-        res=self._getdata(itf,itf_paras)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows,equTypeCD=equTypeCD,ticker=ticker)
         return res
         
     

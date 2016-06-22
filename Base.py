@@ -73,8 +73,11 @@ class Base(object):
         def any_2list(self,obj):
             return obj if self.is_iter(obj) else [obj] 
         
+        #判断是不是可迭代的
+        #list、tuple或迭代器返回True
+        #string、dict的返回结果都是False
         def is_iter(self,x):
-            if hasattr(x, '__iter__'):
+            if hasattr(x, '__iter__') and type(x)!=dict:
                 return True
             else:
                 return False

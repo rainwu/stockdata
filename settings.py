@@ -27,4 +27,6 @@ timezone=pytz.timezone('Asia/Shanghai')
 process_num=3
 thread_num=2
 date_format="%Y-%m-%d"
+emptylist=[None,[],'',{}]
+defaultna=None
 
