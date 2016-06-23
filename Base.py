@@ -17,11 +17,67 @@ from os.path import isfile, join
 
 date_format=settings.date_format
 current_path=os.getcwd()+'\\'
+defaultna=settings.defaultna
+
+
+def test():
+    base=Base()
+    #date_quater(self,date):
+    base.date_quater()
+    base.date_quater('2016-01-01')
+    #date_yqmd(self,date)
+    base.date_yqmd()
+    base.date_yqmd('2016-01-01')
+    #str_to_datetime(self,s,dateformat=date_format)
+    base.str_to_datetime('2016-01-01')
+    base.str_to_datetime(['2016-01-01','2016-02-01'])
+    # date_togap(self,date,dateformat=date_format,gap_type=0,gap_val=0)
+    base.date_togap(gap_type=0,gap_val=10)
+    base.date_togap(gap_type=0,gap_val=-10)
+    base.date_togap(gap_type=1,gap_val=1)
+    base.date_togap(gap_type=2,gap_val=1)
+    base.date_togap('2016-01-01',gap_type=1,gap_val=1)
+    
 
 class Base(object):
     
         def __init__(self):
             pass
+    #==============装饰器==================================
+        def deco_dateformat(func):
+            def _defaultdate(self,date=defaultna,dateformat=date_format,
+                             *args,**kargs):
+                #输入date默认值
+                if date==defaultna:
+                    date=datetime.datetime.now()
+                #输入str转为datetime
+                if type(date)==str:
+                    date=self.str_to_datetime(date,dateformat)
+                
+                return func(self,date,*args,**kargs)
+            return _defaultdate
+        
+        def deco_iterresult(func):
+            def _iterresult(self,isiterx,*args,**kargs):
+                if self.is_iter(isiterx):
+                    return [func(self,x) for x in isiterx]
+                else:
+                    return func(self,isiterx)
+            return _iterresult
+        
+    #=====================日期处理================================
+        #date---datetime
+        @deco_dateformat
+        def date_quater(self,date):
+            return date.month/3+int((date.month%3)>0)
+        
+        #date---str
+        @deco_dateformat
+        def date_yqmd(self,date):
+            vals=[date.year,self.date_quater(date),date.month,date.day]
+            return vals
+            
+            
 
             #获取当日日期的str格式
             #导入：datetime
@@ -31,21 +87,28 @@ class Base(object):
             #date--参考日期，默认为当天, 格式是%Y-%m-%d
             #gap--输出参考日期的日期间隔
             #gap_type---日期间隔的类别，0day1month2year
-        def today_as_str(self,base_date='',dateformat=date_format,gap_type=0,gap_val=0):
+        @deco_dateformat
+        def date_togap(self,date,dateformat=date_format,gap_type=0,gap_val=0):
             
             gap_types=['days','months','years']
-            gap_arg={gap_types[gap_type]:gap_val}
-            
-            if not base_date:
-                #获取当前日期datetime.datetime格式
-                base_date = datetime.datetime.now()
-            else:
-                base_date=datetime.datetime.strptime(base_date,dateformat)
-            
             #转化为string格式
-            tar_date=base_date + relativedelta(**gap_arg)
+            tar_date=date + relativedelta(**{gap_types[gap_type]:gap_val})
+            return self.datetime_to_str(tar_date,dateformat)
+        
+        def date_today(self):
+            return self.date_togap()
             
-            return tar_date.strftime(dateformat)
+        #将str list 或str转为datetime
+        @deco_iterresult
+        def str_to_datetime(self,s,dateformat=date_format):
+            return datetime.datetime.strptime(s,dateformat)
+
+        
+        #将str list 或str转为datetime
+        @deco_iterresult
+        def datetime_to_str(self,s,dateformat=date_format):
+            return s.strftime(dateformat)
+                
         
         def gap_to_today(self,date,loc_format='%Y-%m-%d',gatype=1):
             gap_div=[1.0,30.0,360.0]
@@ -203,21 +266,7 @@ class Base(object):
             date=self.str_to_datetime(strdate)
             return self.datetime_to_str(date+datetime.timedelta(days=gap))
         
-        #将str list 或str转为datetime
-        def str_to_datetime(self,s,dateformat=date_format):
-            f=lambda x:datetime.datetime.strptime(x,dateformat)
-            if self.is_iter(s):
-                return [f(x) for x in s]
-            else:
-                return f(s)
-        
-                #将str list 或str转为datetime
-        def datetime_to_str(self,s,dateformat=date_format):
-            f=lambda x: x.strftime(dateformat)
-            if self.is_iter(s):
-                return [f(x) for x in s]
-            else:
-                return f(s)
+
         
         #数值转为位数为l的string，不足长度的部分用pad填充     
         #front--在前方补零，back--在后方补零

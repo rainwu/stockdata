@@ -32,10 +32,10 @@ class DataCapture(object):
     
     def __init__(self,token=settings.token):
         self.token=settings.token
-        self.ba=Base()
+        self.base=Base()
     
     def isEmptydf(self,df):
-        return (df==defaultna) or max(df.shape)==0
+        return df is None or min(df.shape)==0
     
         #数据抓取,实现网络问题时重新抓取
     #参数说明：
@@ -113,8 +113,12 @@ class DataCapture(object):
                 df=_data_extractrow_byindex(df,rowval) if colnam==indexnam \
                     else _data_extractrow_byval(df,colnam,rowval)
             return df
+            
+        df_rowextracted=data_extractrow(df,select_rows)
+        
+        return df_rowextracted if self.isEmptydf(df_rowextracted) \
+            else data_extractcol(df_rowextracted,select_colnams)
 
-        return data_extractcol(data_extractrow(df,select_rows),select_colnams)
     
     #所有接口通用的数据抓取流程    
         
@@ -155,6 +159,33 @@ def test_StockInterfaceTS():
     ticker=['000001',['000001'],'100000']
     data=iter([ex.getEqu(x) for x in ticker])
     next(data)
+    # getFudHod(self,year=defaultna,quater=4,select_colnams=defaultna,select_rows=defaultna)
+    res=ex.getFudHod(2015,1,select_colnams='code')     
+    res=ex.getFudHod(2015,1,select_colnams=['code','nums']) 
+    res=ex.getFudHod(2015,1,select_colnams='notexit')
+    res=ex.getFudHod(2015,1,select_colnams=['code','notexit'])
+    res=ex.getFudHod(2015,1,select_rows={'code':'603993','nums':15})  
+    res=ex.getFudHod(2015,1,select_rows={'code':['603993','000001']},select_colnams='nums')
+    res=ex.getFudHod(2015,1,select_rows={'code':[]},select_colnams='nums')  
+    res=ex.getFudHod(2015,1,select_rows={'code':'1000001'},select_colnams='nums') 
+    res=ex.getFudHod(2015,1,select_rows={'code':['603993','1000001']})
+    res=ex.getFudHod(2015,1,select_rows={'notexit':['603993','000001']},select_colnams='nums')
+    res=ex.getFudHod(2015)    
+    res=ex.getFudHod(2017)
+    res=ex.getFudHod(2017,3)
+    res=ex.getFudHod()
+    res=ex.getFudHod(2016,1)
+    res=ex.getFudHod(2016)
+    res=ex.getFudHod(2016,2)
+    res=ex.getFudHod(2015,9)
+    #getHDat(self,code,start,end,index=False,select_colnams=defaultna,select_rows=defaultna)
+    code='000001'
+    res=ex.getHDat(code=code)
+    res=ex.getHDat(code=code,start='2016-06-20')
+    res=ex.getHDat(code=code,start='2016-06-20',end='2016-06-20')
+    res=ex.getHDat(code=code,start='2016-06-11',end='2016-06-12')
+    res=ex.getHDat(code='000002')
+    res=ex.getHDat(code='0000021')
     
     
 #tushare接口
@@ -162,7 +193,21 @@ class StockInterfaceTS(object):
     
     def __init__(self,token=settings.token):
         self.token=settings.token
+        self.base=Base()
         self.cap=DataCapture()
+    
+    #==============装饰器==================================
+    def deco_defaultdate(func):
+        def _defaultdate(self,start=defaultna,end=defaultna,*args,**kargs):
+                #输入date默认值
+            if end==defaultna:
+                end=self.base.date_today()
+            if start==defaultna:
+                start=self.base.date_togap(end,gap_type=1,gap_val=-1)
+                
+            return func(self,start=start,end=end,*args,**kargs)
+            
+        return _defaultdate
     
     
 #=================基本信息==========================
@@ -300,24 +345,27 @@ class StockInterfaceTS(object):
                       select_rows)
         return res
     
-    ##基金持股数据
-    def getFudHod(self,year='',quater=''):
+    ##基金持股数据,输入的日期大于最新一期数据日期，则返回最新一期数据
+    #year--数据年份
+    def getFudHod(self,year=defaultna,quarter=4,select_colnams=defaultna,
+                  select_rows=defaultna):
         
-        now = datetime.datetime.today()
-        if not year or year>now.year:
-            year=now.year
-        if not quater:
-            if year<now.year:
-                quater=4
-            else:
-                quater=(now.month-1)/3
-                if quater==0:
-                    quater=4
-                    year=year-1
+        #获取当前数据库中最新季报
+        #从当前日期的前三个月算出上个季度的，年，季
+        y,q,m,d=self.base.date_yqmd( \
+            self.base.date_togap(gap_type=1,gap_val=-3))
         
-        itf=ts.fund_holdings
-        itf_paras={'year':year,'quater':quater}
-        res=self._getdata(itf,itf_paras)
+        #如果输入年份超限或不存在，返回默认最近一期的季报
+        #输入年份为当年，季度取输入值和最近一期季度的最小
+        if year==defaultna or year>y:
+            print '年份超限或未赋值，获取最近一期数据...'
+            year,quarter=y,q
+        elif year==y:
+            quarter=min(quarter,q)
+        
+        request_itf=ts.fund_holdings
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows,year=year,quarter=quarter)
         return res
 
 #============交易数据====================================
@@ -329,19 +377,16 @@ class StockInterfaceTS(object):
     #index：False为股票，True为基金
     #返回:
     #pandas dataframe
-    def getHDat(self,code,start='',end='',index=False):
-        
-        #输入处理
-        #默认值处理
-        if len(end)==0:
-            end=self.ba.today_as_str()
-            
+    #停牌、不存在的股票返回none
+    #非交易日返回none
+    @deco_defaultdate
+    def getHDat(self,code,start=defaultna,end=defaultna,index=False,select_colnams=defaultna,
+                  select_rows=defaultna):
         #定义接口，定义接口参数
-        itf=ts.get_h_data
-        itf_paras={'code':code,'start':start,'end':end,'index':index}
-        
+        request_itf=ts.get_h_data
         #获取数据
-        res=self._getdata(itf,itf_paras)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows,code=code,start=start,end=end,index=index)
         return res
     
     #某只股票或指数（几个主要的）在某天到某天的交易数据，5分钟 15=15分钟 30=30分钟 60=60分钟线
@@ -355,20 +400,17 @@ class StockInterfaceTS(object):
     #index：False为股票，True为基金
     #返回:
     #pandas dataframe
-    def getHisDat(self,code,start='',end='',ktype='5'):
-        
-        #输入处理
-        #默认值处理
-        if len(start)==0:
-            start=self.ba.today_as_str()
-        if len(end)==0:
-            end=self.ba.strdate_calc(start,gap=1)
+    @deco_defaultdate
+    def getHisDat(self,code,start=defaultna,end=defaultna,ktype='5',select_colnams=defaultna,
+                  select_rows=defaultna):
         #定义接口，定义接口参数
-        itf=ts.get_hist_data
-        itf_paras={'code':code,'start':start,'end':end,'ktype':ktype}
+        request_itf=ts.get_hist_data
         #获取数据
-        res=self._getdata(itf,itf_paras)
+        res=self.cap.data_capture_flow(request_itf,select_colnams,
+                      select_rows,code=code,start=start,end=end,ktype=ktype)
         return res
+        
+#==================修改完毕分界线========================
     
     #某只股票在某天的成交逐笔
     #参数说明：

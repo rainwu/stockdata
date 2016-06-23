@@ -40,6 +40,15 @@ date_format=settings.date_format
 process_num=settings.process_num
 thread_num=settings.thread_num
 
+def test():
+    ex=StockDataProc()
+    ex.is_tickersh('000001')
+    ex.is_tickersh(['000001','600001'])
+    ex.is_tickercyb(['000001','600001','300001'])
+    issz=lambda x : ex.is_tickersz(x) or ex.is_tickercyb(x)
+    list(ex.get_tickersz(['600001','300001','000001']))
+    
+
 
 class StockDataProc(object):
     
@@ -53,192 +62,14 @@ class StockDataProc(object):
         'itfHDat_proc':self.wp.itfHDat_proc,
         'itfHisDatD_proc':self.wp.itfHisDatD_proc
                    }
-        
-    #==============批量数据抓取处理==============               
-    def _get_results(self,resultqueue):
-        while not resultqueue.empty():
-                yield resultqueue.get()
-        
-            
-    def _put_tasks(self,tasks,taskqueue,taskqueue_lk):
-        taskqueue_lk.acquire()
-        try:
-            #将数据塞入队列
-            for i in tasks:
-                taskqueue.put(i)
-            taskqueue_lk.notify()
-        finally:       
-            taskqueue_lk.release()
-    
-    def _start_threads(self,taskqueue,resultqueue,taskqueue_lk,
-                       threadnum,task_funcsconst,task_funcsconstparas={}):
-        for p in range(threadnum):
-            p = threading.Thread(target=self.multithread_task, args=(taskqueue,resultqueue,
-                                         taskqueue_lk,task_funcsconst,
-                                         task_funcsconstparas),
-                                         name='TH'+str(p))
-            p.daemon=True
-            p.start()
-            
-    def multiprocess_task(self,taskqueue,resultqueue,taskqueue_lk,
-                          threadnum,task_funcsconst,task_funcsconstparas={}):    
-        #判断taskqueue是否为空的锁，因为queue的empty方法没有加锁，所以手工加锁
-        taskqueue_lk_th = threading.Condition(threading.Lock())
-        
-        #等待taskqueue放入完毕
-        taskqueue_lk.acquire()
-        if taskqueue.empty():
-             logger.info(multiprocessing.current_process().name+' wait!')
-             taskqueue_lk.wait()
-        taskqueue_lk.release()
-        
-        #开始线程，数据抓取的执行部分
-        self._start_threads(taskqueue,resultqueue,taskqueue_lk_th,
-                            threadnum,task_funcsconst,task_funcsconstparas)
-            
-        #进程等待所有线程结束
-        logger.info(multiprocessing.current_process().name+' join!')
-        taskqueue.join()
-        logger.info(multiprocessing.current_process().name+' end!')
-            
-            
-    def multithread_task(self,taskqueue,resultqueue,taskqueue_lk,
-                         task_funcsconst=None,task_funcsconstparas={}):
-        func_dict={'itfHDat_proc':self.wp.itfHDat_proc,
-        'itfHisDatD_proc':self.wp.itfHisDatD_proc
-                   }
-        #执行数据抓取直到taskqueue所有task被执行完
-        while 1:
-            #taskqueue中没有任务时候，线程挂起
-            #等待taskqueue放入完毕
-            logger.info(threading.current_thread().name+' start!')
-            taskqueue_lk.acquire()
-            if taskqueue.empty():
-                logger.info(threading.current_thread().name+' wait!')
-                taskqueue_lk.wait()
-            taskqueue_lk.release()
-        
-            #数据抓取，queue的get函数有锁
-            if task_funcsconst is None:
-                task_funcnam,task_funcparas=taskqueue.get()
-                task_func=func_dict[task_funcnam]
+                   
+    def deco_iterresult(func):
+        def _iterresult(self,isiterx,*args,**kargs):
+            if self.base.is_iter(isiterx):
+                return [func(self,x) for x in isiterx]
             else:
-                task_funcparas=taskqueue.get()
-                task_func=task_funcsconst
-                
-            logger.info(threading.current_thread().name+' getdata!')
-            task_funcparas.update(task_funcsconstparas)
-            data=task_func(**task_funcparas)
-            #数据写入，queue的put函数有锁
-            logger.info(threading.current_thread().name+' writedata!')
-            resultqueue.put(data)
-            #taskqueue的任务计数器减1，减到0释放上一级进程的join
-            taskqueue.task_done()
-        logger.info(threading.current_thread().name+' end!')
-    
-    def getdata_multiprocess(self,task_funcsiter=None,task_funcsiterparas={},
-                            task_funcsconst=None,task_funcsconstparas={},processnum=None,
-                            threadnum=2):
-        def _start_processes(taskqueue,resultqueue,taskqueue_lk,task_funcsconst,
-                             task_funcsconstparas,processnum,threadnum):
-            for i in range(processnum):
-                p = Process(target=self.multiprocess_task, args=(taskqueue,resultqueue,
-                                         taskqueue_lk,threadnum,
-                                         task_funcsconst,task_funcsconstparas
-                                         ),name='P'+str(i))
-                p.daemon=True
-                p.start()
-                
-        processnum=processnum if processnum else multiprocessing.cpu_count()
-        #任务传送queue
-        taskqueue=JoinableQueue()
-        #任务写入/唤醒lock
-        taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
-        #结果传送queue
-        resultqueue=Queue()
-        
-        _start_processes(taskqueue,resultqueue,taskqueue_lk,task_funcsconst,
-                            task_funcsconstparas,processnum,threadnum)
-        #放入任务，唤醒进程
-        if task_funcsconst is None:
-            self._put_tasks(zip(task_funcsiter,task_funcsiterparas),taskqueue,taskqueue_lk)
-        else:
-            self._put_tasks(task_funcsiterparas,taskqueue,taskqueue_lk)
-        logger.info('main join!')
-        taskqueue.join()
-        logger.info('main end!')
-        return self._get_results(resultqueue)
-    
-    def getdata_multithread(self,task_funcsiter=None,task_funcsiterparas={},
-                            task_funcsconst=None,task_funcsconstparas={},
-                            thread_maxnum=4):
-                
-        threadnum=min(len(task_funcsiter),thread_maxnum)
-        #任务传送queue
-        taskqueue=JoinableQueue()
-        #任务写入/唤醒lock
-        taskqueue_lk = multiprocessing.Condition(multiprocessing.Lock())
-        #结果传送queue
-        resultqueue=Queue()
-        
-        self._start_threads(taskqueue,resultqueue,taskqueue_lk,
-                            threadnum,task_funcsconst,task_funcsconstparas)
-        #放入任务，唤醒进程
-        if task_funcsconst is None:
-            self._put_tasks(zip(task_funcsiter,task_funcsiterparas),taskqueue,taskqueue_lk)
-        else:
-            self._put_tasks(task_funcsiterparas,taskqueue,taskqueue_lk)
-        
-        taskqueue.join()
-
-        return self._get_results(resultqueue)
-    
-    
-    
-    def test(self):
-        #wp=StockInterfaceWrap()
-#        date='2016-06-01'
-#        trade_field=[['volume','amount'],['p_change']]
-#        itfs=['itfHDat_proc','itfHisDatD_proc']
-#        
-#        itfparas=[{'code':'000001','start':date,'end':date,'field': trade_field[0]},
-#                      {'code':'000001','start':date,'end':date,'field': trade_field[1]}]
-#            
-#        mergeby='date'
-    
-        #res=self.getdata_multisource(itfs,itfparas,mergeby)
-        date='2016-06-01'
-        iterkeys=['000001','000002','300133','000718','600547']
-        iterkeynam='code'
-        trade_field=[['volume','amount'],['p_change']]
-        #itfs=['itfHDat_proc','itfHisDatD_proc']
-        taskfuncs=self.wp.itfHDat_proc
-        #itfparas=[{'start':date,'end':date,'field': trade_field[0]},
-         #         {'start':date,'end':date,'field': trade_field[1]}]
-        taskfuncs_paras={'start':date,'end':date,'field': trade_field[0]}
-        mergebys='date'
-        
-#        task_funcsconst=taskfuncs
-#        task_funcsiterparas=iter([{iterkeynam:t} for t in iterkeys])
-#        task_funcsconstparas=taskfuncs_paras
-#        res=self.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
-#                            task_funcsconst=task_funcsconst,
-#                            task_funcsconstparas=task_funcsconstparas)
-                            
-        res=self.get_datetrade_concept('生物育种','2016-06-01')
-        
-        
-#        task_funcsiterparas=iter([{iterkeynam:t} for t in iterkeys])
-#        res=p.getdata_multiprocess(task_funcsiterparas=task_funcsiterparas,
-#                            task_funcsconst=taskfuncs,task_funcsconstparas=taskfuncs_paras)
-        
-
-        
-        
-        return res
-#        taskqueue=JoinableQueue()
-#        taskqueue.put(self.func_warp('itfHDat_proc',{'start':'2016-06-10'}))
-
+                return func(self,isiterx)
+        return _iterresult
         
     #给起始和终止日期，返回期间的行
     #colnam是date类型所在的列
@@ -310,38 +141,37 @@ class StockDataProc(object):
         return usemethod(dataiter)
 
 
-
-    #test  itfHisDatD_proc(self,code,start='',end='',field   
-        #itfHDat_proc(self,code,start='',end='',field
-#    itfs=[ex.wp.itfHisDatD_proc,ex.wp.itfHDat_proc]
-#    itfparas=[{'code':'000001','start':'2016-05-18','field':['date','p_change']},{'code':'000001','start':'2016-05-18','field':['date','volume','amount']}]
-#    mergebys='date'
-#    _get_dataandmerge(itfs,itfparas,mergebys)
     #获取所有深市股票代码
-    def get_tickersz(self,tickerall):
-        return [tk for tk in tickerall if tk.startswith('0') or tk.startswith('3')]
+    #返回迭代器
+    def get_tickersz(self,tickers):
+        issz=lambda x : self.is_tickersz(x) or self.is_tickercyb(x)
+        return itertools.ifilter(issz,tickers)
     
     #获取所有深市股票代码（不包含创业板）
     #tp---True返回包括停牌股票，False不反悔停牌股票
-    def get_tickerszmain(self,tickerall):
-        return [tk for tk in tickerall if tk.startswith('0')]
+    def get_tickerszmain(self,tickers):
+        return itertools.ifilter(self.is_tickersz,tickers)
     
     #获取所有创业板股票代码
-    def get_tickercyb(self,tickerall):
-        return [tk for tk in tickerall if tk.startswith('3')]
+    def get_tickercyb(self,tickers):
+        return itertools.ifilter(self.is_tickercyb,tickers)
         
     #获取所有沪市股票代码
-    def get_tickersh(self,tickerall):
-        return [tk for tk in tickerall if tk.startswith('6')]
+    def get_tickersh(self,tickers):
+        return itertools.ifilter(self.is_tickersh,tickers)
     
-    def is_tickersh(self,tickers):
-        return [tk.startswith('6') for tk in tickers]
+    #返回bool list
+    @deco_iterresult
+    def is_tickersh(self,ticker):
+        return ticker.startswith('6')
     
-    def is_tickersz(self,tickers):
-        return [tk.startswith('0') for tk in tickers]
+    @deco_iterresult
+    def is_tickersz(self,ticker):
+        return ticker.startswith('0')
     
-    def is_tickercyb(self,tickers):
-        return [tk.startswith('3') for tk in tickers]
+    @deco_iterresult
+    def is_tickercyb(self,ticker):
+        return ticker.startswith('3')
     
     
     
